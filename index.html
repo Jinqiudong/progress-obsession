@@ -45,6 +45,11 @@
         .task-done { text-decoration: line-through; opacity: 0.3; }
 
         #progress-bar { transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        /* 拖拽样式 */
+        .dragging { opacity: 0.5; background: #f8fafc; border: 2px dashed #cbd5e1; }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
     </style>
 </head>
 <body class="min-h-screen pb-28">
@@ -110,7 +115,16 @@
             <h3 id="modal-title" class="text-xl font-extrabold mb-6 text-slate-800 tracking-tight">构建新的秩序</h3>
             <div id="modal-body" class="space-y-4">
                 <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium" placeholder="在此输入项目名称...">
-                <select id="modal-select" class="hidden w-full px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-slate-700 font-medium"></select>
+                <div id="modal-habit-extras" class="hidden space-y-4">
+                    <div class="flex gap-4">
+                        <select id="modal-select" class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-slate-700 font-medium"></select>
+                        <select id="modal-freq" class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-slate-700 font-medium">
+                            <option value="daily">每日 (Daily)</option>
+                            <option value="workday">工作日 (Mon-Fri)</option>
+                            <option value="weekend">周末 (Weekend)</option>
+                        </select>
+                    </div>
+                </div>
                 <textarea id="modal-textarea" class="hidden w-full h-48 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-[10px] font-mono leading-relaxed text-slate-500"></textarea>
             </div>
             <div id="modal-footer" class="flex gap-4 mt-8">
@@ -130,11 +144,11 @@
                 achieved: "项达成",
                 allSystems: "所有系统",
                 noObsessions: "尚未构建任何秩序",
-                discard: "丢弃 (Discard)",
                 dailyUnit: "每日单元",
                 addSubtask: "拆解任务步奏",
-                confirmDelete: "确定要丢弃这项计划吗？这可能会破坏你的连胜曲线。",
+                confirmDelete: "确定要丢弃这项计划吗？",
                 modalNewOrder: "构建新的秩序",
+                modalEditOrder: "编辑现有秩序",
                 modalNewCat: "新增分类系统",
                 modalSubtask: "拆解任务",
                 modalBackup: "数据同步 / 云端存档",
@@ -151,11 +165,11 @@
                 achieved: "Goals Done",
                 allSystems: "All Systems",
                 noObsessions: "No Obsessions Found.",
-                discard: "Discard",
                 dailyUnit: "Daily Unit",
                 addSubtask: "Add Subtask",
                 confirmDelete: "Are you sure you want to discard this?",
                 modalNewOrder: "New Order",
+                modalEditOrder: "Edit Habit",
                 modalNewCat: "New Category",
                 modalSubtask: "Task Breakdown",
                 modalBackup: "Data Sync",
@@ -167,57 +181,31 @@
         };
 
         let currentLang = localStorage.getItem('app_lang') || 'zh';
-
         const successSnd = new Audio('data:audio/wav;base64,UklGRnoAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA');
+
         function playSuccessSound() {
             try { successSnd.cloneNode().play(); } catch(e) {}
             if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
 
-        // 初始化分类
-        let categories = JSON.parse(localStorage.getItem('habits_categories_v8')) || [
+        let categories = JSON.parse(localStorage.getItem('habits_categories_v9')) || [
             { id: '1', name: '日常' },
             { id: '2', name: '个人' },
             { id: '3', name: '提升' }
         ];
 
-        // 预设秩序数据
         const defaultHabits = [
-            {
-                id: 1001,
-                name: "刷牙",
-                category: "日常",
-                subtasks: ["早起刷牙", "睡前刷牙"],
-                history: {}
-            },
-            {
-                id: 1002,
-                name: "整理床铺",
-                category: "日常",
-                subtasks: ["整理被褥", "物品归位"],
-                history: {}
-            },
-            {
-                id: 1003,
-                name: "每日饮水",
-                category: "个人",
-                subtasks: ["晨间补水", "午后补水", "晚间补水"],
-                history: {}
-            },
-            {
-                id: 1004,
-                name: "复盘记录",
-                category: "提升",
-                subtasks: ["今日总结"],
-                history: {}
-            }
+            { id: 1001, name: "刷牙", category: "日常", freq: "daily", subtasks: ["早起刷牙", "睡前刷牙"], history: {} },
+            { id: 1002, name: "整理床铺", category: "日常", freq: "daily", subtasks: ["整理被褥", "物品归位"], history: {} },
+            { id: 1003, name: "每日饮水", category: "个人", freq: "daily", subtasks: ["晨间补水", "午后补水", "晚间补水"], history: {} }
         ];
 
-        let habits = JSON.parse(localStorage.getItem('habits_v8'));
+        let habits = JSON.parse(localStorage.getItem('habits_v9'));
         if (!habits || habits.length === 0) habits = defaultHabits;
 
         let currentCat = '全部';
         const todayStr = new Date().toISOString().split('T')[0];
+        const dayOfWeek = new Date().getDay(); // 0-6 (Sun-Sat)
         let modalCallback = null;
 
         function refresh() {
@@ -237,7 +225,6 @@
             document.getElementById('unit-achieved').innerText = t.achieved;
             document.getElementById('modal-cancel').innerText = t.cancel;
             document.getElementById('modal-confirm').innerText = t.confirm;
-
             const now = new Date();
             document.getElementById('today-date').innerText = now.toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
                 month: 'short', day: 'numeric', weekday: 'short'
@@ -245,14 +232,22 @@
         }
 
         function saveData() {
-            localStorage.setItem('habits_categories_v8', JSON.stringify(categories));
-            localStorage.setItem('habits_v8', JSON.stringify(habits));
+            localStorage.setItem('habits_categories_v9', JSON.stringify(categories));
+            localStorage.setItem('habits_v9', JSON.stringify(habits));
             localStorage.setItem('app_lang', currentLang);
+        }
+
+        function isHabitDueToday(habit) {
+            if (!habit.freq || habit.freq === 'daily') return true;
+            if (habit.freq === 'workday') return dayOfWeek >= 1 && dayOfWeek <= 5;
+            if (habit.freq === 'weekend') return dayOfWeek === 0 || dayOfWeek === 6;
+            return true;
         }
 
         function updateStats() {
             const datesWithCheckins = new Set();
             let todayFinished = 0;
+            const dueHabitsCount = habits.filter(isHabitDueToday).length;
 
             habits.forEach(h => {
                 Object.keys(h.history).forEach(date => {
@@ -277,10 +272,10 @@
             }
 
             document.getElementById('stat-total').innerText = todayFinished;
-            document.getElementById('stat-goal').innerText = habits.length;
+            document.getElementById('stat-goal').innerText = dueHabitsCount;
             document.getElementById('stat-streak').innerText = streak;
 
-            const progress = habits.length > 0 ? (todayFinished / habits.length) * 100 : 0;
+            const progress = dueHabitsCount > 0 ? (todayFinished / dueHabitsCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = `${progress}%`;
 
             const weekView = document.getElementById('week-view');
@@ -313,7 +308,10 @@
             const container = document.getElementById('habits-container');
             container.innerHTML = '';
             const t = i18n[currentLang];
-            const filtered = currentCat === '全部' ? habits : habits.filter(h => h.category === currentCat);
+
+            // 过滤：当前分类 + 今日需打卡
+            let filtered = habits.filter(isHabitDueToday);
+            if (currentCat !== '全部') filtered = filtered.filter(h => h.category === currentCat);
 
             if(filtered.length === 0) {
                 container.innerHTML = `<div class="text-center py-24 opacity-20"><p class="text-slate-900 text-[10px] font-black uppercase tracking-[0.3em]">${t.noObsessions}</p></div>`;
@@ -322,37 +320,53 @@
 
             filtered.forEach(habit => {
                 const card = document.createElement('div');
-                card.className = 'glass rounded-[2.5rem] p-6 shadow-sm mb-4 border border-white/50 transition-all hover:shadow-xl';
+                card.className = 'glass rounded-[2.5rem] p-6 shadow-sm mb-4 border border-white/50 transition-all hover:shadow-xl relative';
                 const dayData = habit.history[todayStr] || { allDone: false, subtasks: [] };
 
                 card.innerHTML = `
-                    <div class="flex justify-between items-center mb-5">
+                    <div class="flex justify-between items-start mb-5">
                         <div class="flex-1">
-                            <span class="text-[9px] font-black text-indigo-500/40 uppercase tracking-[0.2em]">${habit.category}</span>
+                            <span class="text-[9px] font-black text-indigo-500/40 uppercase tracking-[0.2em]">${habit.category} • ${habit.freq || 'daily'}</span>
                             <h4 class="font-bold text-slate-800 text-lg leading-tight mt-0.5 ${dayData.allDone ? 'opacity-30' : ''}">${habit.name}</h4>
                             <div class="mt-1 flex gap-1">
                                 ${habit.subtasks.map((_, i) => `<div class="w-4 h-1 rounded-full ${dayData.subtasks.includes(i) ? 'bg-indigo-500' : 'bg-slate-100'} transition-all"></div>`).join('')}
                             </div>
                         </div>
-                        <button class="main-check w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 btn-press ${dayData.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
-                            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                        </button>
+                        <div class="flex flex-col gap-2 items-center">
+                            <button class="edit-habit p-2 text-slate-300 hover:text-indigo-500 transition-colors btn-press">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            </button>
+                            <button class="main-check w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 btn-press ${dayData.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="space-y-3">
+                    <div class="subtasks-list space-y-3" data-habit-id="${habit.id}">
                         ${habit.subtasks.map((st, i) => `
-                            <div class="flex items-center gap-3 group">
+                            <div class="flex items-center gap-3 group draggable-item" draggable="true" data-index="${i}">
+                                <div class="drag-handle opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-300">
+                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
+                                </div>
                                 <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0 transition-all" data-idx="${i}" ${dayData.subtasks.includes(i) ? 'checked' : ''}>
                                 <span class="flex-1 text-sm font-semibold transition-all ${dayData.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
                             </div>
                         `).join('')}
                     </div>
                     <div class="mt-6 pt-4 border-t border-slate-50 flex justify-between items-center">
-                         <button class="del-habit text-[9px] font-black text-slate-200 hover:text-red-300 transition-colors uppercase tracking-widest">${t.discard}</button>
+                         <button class="del-habit p-1 text-slate-200 hover:text-red-400 transition-colors btn-press">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                         </button>
                          <button class="add-sub-trigger text-[9px] font-black text-indigo-300 hover:text-indigo-500 uppercase tracking-widest">+ ${t.addSubtask}</button>
                     </div>
                 `;
 
+                // 事件绑定
                 card.querySelector('.main-check').onclick = () => toggleMain(habit);
+                card.querySelector('.edit-habit').onclick = () => {
+                    openModal(t.modalEditOrder, habit.name, (n, c, f) => {
+                        if(n) { habit.name = n; habit.category = c; habit.freq = f; refresh(); }
+                    }, 'habit', habit.category, habit.freq);
+                };
                 card.querySelectorAll('.sub-check').forEach(cb => {
                     cb.onclick = () => toggleSub(habit, parseInt(cb.dataset.idx));
                 });
@@ -362,8 +376,64 @@
                 card.querySelector('.del-habit').onclick = () => {
                     if(confirm(t.confirmDelete)){ habits=habits.filter(h=>h.id!==habit.id); refresh(); }
                 };
+
+                // 拖拽逻辑实现
+                initDragAndDrop(card.querySelector('.subtasks-list'), habit);
+
                 container.appendChild(card);
             });
+        }
+
+        function initDragAndDrop(container, habit) {
+            let dragIdx = null;
+            container.addEventListener('dragstart', (e) => {
+                const item = e.target.closest('.draggable-item');
+                if (!item) return;
+                dragIdx = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+            });
+
+            container.addEventListener('dragend', (e) => {
+                const item = e.target.closest('.draggable-item');
+                if (item) item.classList.remove('dragging');
+            });
+
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(container, e.clientY);
+                const draggingItem = container.querySelector('.dragging');
+                if (afterElement == null) {
+                    container.appendChild(draggingItem);
+                } else {
+                    container.insertBefore(draggingItem, afterElement);
+                }
+            });
+
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const items = Array.from(container.querySelectorAll('.draggable-item'));
+                const newOrder = items.map(item => habit.subtasks[parseInt(item.dataset.index)]);
+
+                // 更新 habit 对象
+                habit.subtasks = newOrder;
+
+                // 同时更新打卡历史记录中的索引（可选，复杂，此处采取直接重置今日打卡以防索引错乱或简单刷新）
+                if(habit.history[todayStr]) habit.history[todayStr].subtasks = [];
+                refresh();
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.draggable-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
         function toggleMain(habit) {
@@ -394,24 +464,32 @@
             refresh();
         }
 
-        function openModal(title, initialValue, callback, type = 'text') {
+        function openModal(title, initialValue, callback, type = 'text', currentCatVal = '', currentFreqVal = 'daily') {
             const modal = document.getElementById('ui-modal');
             const content = document.getElementById('modal-content');
             const input = document.getElementById('modal-input');
             const select = document.getElementById('modal-select');
+            const freqSelect = document.getElementById('modal-freq');
+            const habitExtras = document.getElementById('modal-habit-extras');
             const textarea = document.getElementById('modal-textarea');
             const t = i18n[currentLang];
+
             document.getElementById('modal-title').innerText = title;
             modalCallback = callback;
-            [input, select, textarea].forEach(el => el.classList.add('hidden'));
+
+            [input, habitExtras, textarea].forEach(el => el.classList.add('hidden'));
+
             if (type === 'habit') {
-                input.classList.remove('hidden'); input.value = ""; input.placeholder = t.modalPlaceholder;
-                select.classList.remove('hidden'); select.innerHTML = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+                input.classList.remove('hidden'); input.value = initialValue; input.placeholder = t.modalPlaceholder;
+                habitExtras.classList.remove('hidden');
+                select.innerHTML = categories.map(c => `<option value="${c.name}" ${c.name === currentCatVal ? 'selected' : ''}>${c.name}</option>`).join('');
+                freqSelect.value = currentFreqVal;
             } else if (type === 'backup') {
                 textarea.classList.remove('hidden'); textarea.value = initialValue;
             } else {
                 input.classList.remove('hidden'); input.value = initialValue; input.placeholder = t.modalPlaceholder;
             }
+
             modal.classList.remove('hidden'); modal.classList.add('flex');
             setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
         }
@@ -426,19 +504,21 @@
         document.getElementById('modal-confirm').onclick = () => {
             const val = document.getElementById('modal-input').value.trim();
             const selVal = document.getElementById('modal-select').value;
+            const freqVal = document.getElementById('modal-freq').value;
             const textVal = document.getElementById('modal-textarea').value.trim();
             if (modalCallback) {
-                if (!document.getElementById('modal-select').classList.contains('hidden')) modalCallback(val, selVal);
+                if (!document.getElementById('modal-habit-extras').classList.contains('hidden')) modalCallback(val, selVal, freqVal);
                 else if (!document.getElementById('modal-textarea').classList.contains('hidden')) modalCallback(textVal);
                 else modalCallback(val);
                 closeModal();
             }
         };
+
         document.getElementById('modal-cancel').onclick = closeModal;
         document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; refresh(); };
         document.getElementById('main-add-btn').onclick = () => {
             const t = i18n[currentLang];
-            openModal(t.modalNewOrder, "", (n, c) => { if(n){habits.push({id:Date.now(),name:n,category:c,subtasks:[],history:{}}); refresh();} }, 'habit');
+            openModal(t.modalNewOrder, "", (n, c, f) => { if(n){habits.push({id:Date.now(),name:n,category:c,freq:f,subtasks:[],history:{}}); refresh();} }, 'habit');
         };
         document.getElementById('add-cat-trigger').onclick = () => {
             const t = i18n[currentLang];
@@ -448,6 +528,7 @@
             const t = i18n[currentLang];
             openModal(t.modalBackup, JSON.stringify({categories, habits}, null, 2), (j) => { try{ const p=JSON.parse(j); if(p.categories&&p.habits){categories=p.categories; habits=p.habits; refresh();}}catch(e){alert(t.formatError);} }, 'backup');
         };
+
         refresh();
     </script>
 </body>
