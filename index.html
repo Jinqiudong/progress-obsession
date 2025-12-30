@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Progress Obsession | 进度条强迫症</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
 
         :root {
             --primary: #6366f1;
-            --primary-dark: #4f46e5;
             --bg-soft: #fbfcfe;
         }
 
@@ -26,6 +24,7 @@
         }
 
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+
         .tab-active { color: var(--primary); font-weight: 800; position: relative; }
         .tab-active::after { content: ''; position: absolute; bottom: -4px; left: 20%; width: 60%; height: 3px; background: var(--primary); border-radius: 10px; }
 
@@ -40,32 +39,32 @@
         .day-box { width: 12px; height: 12px; border-radius: 3px; background: #e2e8f0; transition: all 0.3s; }
         .day-box.completed { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
 
-        .custom-scrollbar::-webkit-scrollbar { display: none; }
-
         .task-done { text-decoration: line-through; opacity: 0.3; }
-
         #progress-bar { transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-        /* 拖拽样式 */
-        .dragging { opacity: 0.5; background: #f8fafc; border: 2px dashed #cbd5e1; }
+        /* Sortable styles */
+        .sortable-ghost { opacity: 0.4; background: #f1f5f9 !important; border-radius: 8px; }
         .drag-handle { cursor: grab; }
         .drag-handle:active { cursor: grabbing; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="min-h-screen pb-28">
     <div id="app" class="max-w-lg mx-auto px-5 pt-8">
-        <!-- 头部 -->
+        <!-- Header -->
         <header class="flex justify-between items-start mb-8">
             <div>
-                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Progress Obsession<span class="text-indigo-600">.</span></h1>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight italic">Progress Obsession<span class="text-indigo-600">.</span></h1>
                 <div class="flex items-center gap-3 mt-1">
                     <p id="today-date" class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]"></p>
-                    <button id="lang-toggle" class="text-[9px] font-black text-indigo-400 border border-indigo-100 px-1.5 py-0.5 rounded-md hover:bg-indigo-50 transition-colors uppercase tracking-widest">EN/CN</button>
+                    <button id="lang-toggle" class="text-[9px] font-black text-indigo-400 border border-indigo-100 px-1.5 py-0.5 rounded-md hover:bg-indigo-50 transition-colors uppercase">EN/CN</button>
                 </div>
             </div>
             <div class="flex gap-3">
-                <button id="btn-data-manage" class="glass text-slate-500 p-3 rounded-2xl btn-press shadow-sm" title="数据存档">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                <button id="btn-settings" class="glass text-slate-500 p-3 rounded-2xl btn-press shadow-sm">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
                 <button id="main-add-btn" class="bg-indigo-600 text-white p-3 rounded-2xl shadow-xl shadow-indigo-200 btn-press">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
@@ -73,14 +72,14 @@
             </div>
         </header>
 
-        <!-- 统计面板 -->
-        <div class="glass rounded-[2.5rem] p-6 mb-8 shadow-sm relative overflow-hidden border border-white/60">
+        <!-- Stats Board -->
+        <div class="glass rounded-[2.5rem] p-6 mb-8 shadow-sm border border-white/60">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <p id="label-streak" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">连胜纪录 (Streak)</p>
+                    <p id="label-streak" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">连胜纪录</p>
                     <div class="flex items-baseline gap-1">
                         <span id="stat-streak" class="text-4xl font-black text-slate-800">0</span>
-                        <span id="unit-days" class="text-slate-400 text-xs font-bold uppercase tracking-tighter">Days</span>
+                        <span id="unit-days" class="text-slate-400 text-xs font-bold uppercase">Days</span>
                     </div>
                 </div>
                 <div class="text-right">
@@ -99,121 +98,131 @@
             </div>
         </div>
 
-        <!-- 分类切换 -->
+        <!-- Categories -->
         <div class="flex items-center gap-2 mb-6 border-b border-slate-100">
-            <nav id="category-tabs" class="flex gap-6 overflow-x-auto pb-3 custom-scrollbar flex-1"></nav>
-            <button id="add-cat-trigger" class="pb-3 px-2 text-slate-300 hover:text-indigo-600 font-bold text-xl btn-press" title="增加分类">+</button>
+            <nav id="category-tabs" class="flex gap-6 overflow-x-auto pb-3 flex-1 no-scrollbar"></nav>
+            <button id="add-cat-trigger" class="pb-3 px-2 text-slate-300 hover:text-indigo-600 font-bold text-xl btn-press">+</button>
         </div>
 
-        <!-- 任务列表 -->
+        <!-- Habits List -->
         <div id="habits-container" class="space-y-5"></div>
     </div>
 
-    <!-- 弹窗 -->
+    <!-- Modal System -->
     <div id="ui-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl transition-all scale-95 opacity-0" id="modal-content">
-            <h3 id="modal-title" class="text-xl font-extrabold mb-6 text-slate-800 tracking-tight">构建新的秩序</h3>
+            <h3 id="modal-title" class="text-xl font-extrabold mb-6 text-slate-800 tracking-tight"></h3>
+
             <div id="modal-body" class="space-y-4">
-                <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium" placeholder="在此输入项目名称...">
+                <!-- Standard Input -->
+                <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium placeholder:text-slate-300" placeholder="在此输入...">
+
+                <!-- Habit Specific Extras (Used for Add & Edit) -->
                 <div id="modal-habit-extras" class="hidden space-y-4">
                     <div class="flex gap-4">
-                        <select id="modal-select" class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-slate-700 font-medium"></select>
-                        <select id="modal-freq" class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-slate-700 font-medium">
-                            <option value="daily">每日 (Daily)</option>
-                            <option value="workday">工作日 (Mon-Fri)</option>
-                            <option value="weekend">周末 (Weekend)</option>
-                        </select>
+                        <div class="flex-1">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block">分类 Category</label>
+                            <select id="modal-select" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium"></select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block">频率 Frequency</label>
+                            <select id="modal-freq" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium">
+                                <option value="daily">每日</option>
+                                <option value="workday">工作日</option>
+                                <option value="weekend">周末</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <textarea id="modal-textarea" class="hidden w-full h-48 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-[10px] font-mono leading-relaxed text-slate-500"></textarea>
+
+                <!-- Settings Specific Extras -->
+                <div id="settings-extras" class="hidden space-y-6 pt-2">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">音效风格 (Sound Style)</p>
+                        <div class="grid grid-cols-2 gap-2" id="sound-options">
+                            <button data-sound="crystal" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">💎 水晶</button>
+                            <button data-sound="wooden" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🪵 木质</button>
+                            <button data-sound="bubble" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🫧 气泡</button>
+                            <button data-sound="none" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🔕 静音</button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">数据管理 (Data Management)</p>
+                        <textarea id="modal-textarea" class="w-full h-32 px-5 py-4 rounded-2xl bg-slate-50 outline-none text-[10px] font-mono text-slate-400 no-scrollbar" placeholder="备份 JSON 数据..."></textarea>
+                    </div>
+                </div>
             </div>
+
             <div id="modal-footer" class="flex gap-4 mt-8">
-                <button id="modal-cancel" class="flex-1 py-4 text-slate-400 font-bold text-xs uppercase tracking-[0.2em] btn-press">Cancel</button>
-                <button id="modal-confirm" class="flex-1 bg-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100 btn-press uppercase tracking-[0.2em]">Confirm</button>
+                <button id="modal-cancel" class="flex-1 py-4 text-slate-400 font-bold text-xs uppercase tracking-widest">Cancel</button>
+                <button id="modal-confirm" class="flex-1 bg-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100 uppercase tracking-widest">Confirm</button>
             </div>
         </div>
     </div>
 
     <script>
+        // --- i18n & Config ---
         const i18n = {
-            zh: {
-                streak: "连胜纪录 (Streak)",
-                days: "天",
-                heatmap: "秩序热力图",
-                todayProgress: "今日进度",
-                achieved: "项达成",
-                allSystems: "所有系统",
-                noObsessions: "尚未构建任何秩序",
-                dailyUnit: "每日单元",
-                addSubtask: "拆解任务步奏",
-                confirmDelete: "确定要丢弃这项计划吗？",
-                modalNewOrder: "构建新的秩序",
-                modalEditOrder: "编辑现有秩序",
-                modalNewCat: "新增分类系统",
-                modalSubtask: "拆解任务",
-                modalBackup: "数据同步 / 云端存档",
-                modalPlaceholder: "在此输入项目名称...",
-                cancel: "取消",
-                confirm: "确定",
-                formatError: "格式校验失败"
-            },
-            en: {
-                streak: "Streak Count",
-                days: "Days",
-                heatmap: "Order Heatmap",
-                todayProgress: "Today's Progress",
-                achieved: "Goals Done",
-                allSystems: "All Systems",
-                noObsessions: "No Obsessions Found.",
-                dailyUnit: "Daily Unit",
-                addSubtask: "Add Subtask",
-                confirmDelete: "Are you sure you want to discard this?",
-                modalNewOrder: "New Order",
-                modalEditOrder: "Edit Habit",
-                modalNewCat: "New Category",
-                modalSubtask: "Task Breakdown",
-                modalBackup: "Data Sync",
-                modalPlaceholder: "Enter item name...",
-                cancel: "Cancel",
-                confirm: "Confirm",
-                formatError: "Validation failed"
-            }
+            zh: { streak: "连胜纪录", days: "天", heatmap: "秩序热力图", todayProgress: "今日进度", achieved: "项达成", allSystems: "所有系统", cancel: "取消", confirm: "确定" },
+            en: { streak: "Streak Count", days: "Days", heatmap: "Order Heatmap", todayProgress: "Today's Progress", achieved: "Goals Done", allSystems: "All Systems", cancel: "Cancel", confirm: "Confirm" }
         };
 
-        let currentLang = localStorage.getItem('app_lang') || 'zh';
-        const successSnd = new Audio('data:audio/wav;base64,UklGRnoAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA');
+        // --- Audio System ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let currentSound = localStorage.getItem('app_sound_v2') || 'crystal';
 
-        function playSuccessSound() {
-            try { successSnd.cloneNode().play(); } catch(e) {}
-            if (window.navigator.vibrate) window.navigator.vibrate(50);
+        function playFeedbackSound() {
+            if (currentSound === 'none') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            if (currentSound === 'crystal') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(); osc.stop(now + 0.1);
+            } else if (currentSound === 'wooden') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.05);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                osc.start(); osc.stop(now + 0.05);
+            } else if (currentSound === 'bubble') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(); osc.stop(now + 0.05);
+            }
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
         }
 
-        let categories = JSON.parse(localStorage.getItem('habits_categories_v9')) || [
-            { id: '1', name: '日常' },
-            { id: '2', name: '个人' },
-            { id: '3', name: '提升' }
+        // --- State Management ---
+        let currentLang = localStorage.getItem('app_lang') || 'zh';
+        let categories = JSON.parse(localStorage.getItem('habits_categories_v9')) || [{ id: '1', name: '日常' }, { id: '2', name: '个人' }];
+        let habits = JSON.parse(localStorage.getItem('habits_v9')) || [
+            { id: 1001, name: "晨间拉伸", category: "日常", freq: "daily", subtasks: ["颈部舒缓"], history: {} }
         ];
-
-        const defaultHabits = [
-            { id: 1001, name: "刷牙", category: "日常", freq: "daily", subtasks: ["早起刷牙", "睡前刷牙"], history: {} },
-            { id: 1002, name: "整理床铺", category: "日常", freq: "daily", subtasks: ["整理被褥", "物品归位"], history: {} },
-            { id: 1003, name: "每日饮水", category: "个人", freq: "daily", subtasks: ["晨间补水", "午后补水", "晚间补水"], history: {} }
-        ];
-
-        let habits = JSON.parse(localStorage.getItem('habits_v9'));
-        if (!habits || habits.length === 0) habits = defaultHabits;
-
         let currentCat = '全部';
         const todayStr = new Date().toISOString().split('T')[0];
-        const dayOfWeek = new Date().getDay(); // 0-6 (Sun-Sat)
         let modalCallback = null;
 
+        // --- Core Functions ---
         function refresh() {
             updateStaticText();
             renderTabs();
             renderHabits();
             updateStats();
-            saveData();
+            localStorage.setItem('habits_categories_v9', JSON.stringify(categories));
+            localStorage.setItem('habits_v9', JSON.stringify(habits));
+            localStorage.setItem('app_lang', currentLang);
+            localStorage.setItem('app_sound_v2', currentSound);
         }
 
         function updateStaticText() {
@@ -225,309 +234,249 @@
             document.getElementById('unit-achieved').innerText = t.achieved;
             document.getElementById('modal-cancel').innerText = t.cancel;
             document.getElementById('modal-confirm').innerText = t.confirm;
-            const now = new Date();
-            document.getElementById('today-date').innerText = now.toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
-                month: 'short', day: 'numeric', weekday: 'short'
-            });
-        }
-
-        function saveData() {
-            localStorage.setItem('habits_categories_v9', JSON.stringify(categories));
-            localStorage.setItem('habits_v9', JSON.stringify(habits));
-            localStorage.setItem('app_lang', currentLang);
+            document.getElementById('today-date').innerText = new Date().toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', weekday: 'short' });
         }
 
         function isHabitDueToday(habit) {
-            if (!habit.freq || habit.freq === 'daily') return true;
-            if (habit.freq === 'workday') return dayOfWeek >= 1 && dayOfWeek <= 5;
-            if (habit.freq === 'weekend') return dayOfWeek === 0 || dayOfWeek === 6;
+            const day = new Date().getDay();
+            if (habit.freq === 'workday') return day >= 1 && day <= 5;
+            if (habit.freq === 'weekend') return day === 0 || day === 6;
             return true;
         }
 
         function updateStats() {
-            const datesWithCheckins = new Set();
-            let todayFinished = 0;
-            const dueHabitsCount = habits.filter(isHabitDueToday).length;
-
+            const historyDates = new Set();
+            let todayDone = 0;
+            const dueToday = habits.filter(isHabitDueToday);
             habits.forEach(h => {
-                Object.keys(h.history).forEach(date => {
-                    if (h.history[date].allDone) {
-                        datesWithCheckins.add(date);
-                        if(date === todayStr) todayFinished++;
-                    }
+                Object.keys(h.history).forEach(d => {
+                    if(h.history[d].allDone) historyDates.add(d);
+                    if(d === todayStr && h.history[d].allDone) todayDone++;
                 });
             });
-
             let streak = 0;
             let checkDate = new Date();
-            while (true) {
-                const dateKey = checkDate.toISOString().split('T')[0];
-                if (datesWithCheckins.has(dateKey)) {
-                    streak++;
-                    checkDate.setDate(checkDate.getDate() - 1);
-                } else {
-                    if (dateKey === todayStr && streak === 0) { checkDate.setDate(checkDate.getDate() - 1); continue; }
-                    break;
-                }
+            while(true) {
+                const k = checkDate.toISOString().split('T')[0];
+                if(historyDates.has(k)) { streak++; checkDate.setDate(checkDate.getDate() - 1); }
+                else { if(k === todayStr && streak === 0) { checkDate.setDate(checkDate.getDate() - 1); continue; } break; }
             }
-
-            document.getElementById('stat-total').innerText = todayFinished;
-            document.getElementById('stat-goal').innerText = dueHabitsCount;
+            document.getElementById('stat-total').innerText = todayDone;
+            document.getElementById('stat-goal').innerText = dueToday.length;
             document.getElementById('stat-streak').innerText = streak;
-
-            const progress = dueHabitsCount > 0 ? (todayFinished / dueHabitsCount) * 100 : 0;
-            document.getElementById('progress-bar').style.width = `${progress}%`;
-
-            const weekView = document.getElementById('week-view');
-            weekView.innerHTML = '';
-            for (let i = 6; i >= 0; i--) {
+            document.getElementById('progress-bar').style.width = `${dueToday.length ? (todayDone/dueToday.length)*100 : 0}%`;
+            const wv = document.getElementById('week-view');
+            wv.innerHTML = '';
+            for(let i=6; i>=0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
-                const dKey = d.toISOString().split('T')[0];
-                const box = document.createElement('div');
-                box.className = `day-box ${datesWithCheckins.has(dKey) ? 'completed' : ''}`;
-                weekView.appendChild(box);
+                const k = d.toISOString().split('T')[0];
+                wv.innerHTML += `<div class="day-box ${historyDates.has(k) ? 'completed' : ''}"></div>`;
             }
         }
 
         function renderTabs() {
             const nav = document.getElementById('category-tabs');
             nav.innerHTML = '';
-            const t = i18n[currentLang];
-            const createTab = (name, label) => {
-                const btn = document.createElement('button');
-                btn.className = `pb-1 text-[10px] font-black uppercase tracking-widest whitespace-nowrap btn-press transition-all ${currentCat === name ? 'tab-active' : 'text-slate-300'}`;
-                btn.innerText = label;
-                btn.onclick = () => { currentCat = name; refresh(); };
-                return btn;
+            const createTab = (id, label) => {
+                const b = document.createElement('button');
+                b.className = `pb-1 text-[10px] font-black uppercase tracking-widest btn-press transition-all whitespace-nowrap ${currentCat === id ? 'tab-active' : 'text-slate-300'}`;
+                b.innerText = label;
+                b.onclick = () => { currentCat = id; refresh(); };
+                return b;
             };
-            nav.appendChild(createTab('全部', t.allSystems));
-            categories.forEach(cat => nav.appendChild(createTab(cat.name, cat.name)));
+            nav.appendChild(createTab('全部', i18n[currentLang].allSystems));
+            categories.forEach(c => nav.appendChild(createTab(c.name, c.name)));
         }
 
         function renderHabits() {
             const container = document.getElementById('habits-container');
             container.innerHTML = '';
-            const t = i18n[currentLang];
-
-            // 过滤：当前分类 + 今日需打卡
             let filtered = habits.filter(isHabitDueToday);
-            if (currentCat !== '全部') filtered = filtered.filter(h => h.category === currentCat);
-
-            if(filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-24 opacity-20"><p class="text-slate-900 text-[10px] font-black uppercase tracking-[0.3em]">${t.noObsessions}</p></div>`;
-                return;
-            }
+            if(currentCat !== '全部') filtered = filtered.filter(h => h.category === currentCat);
 
             filtered.forEach(habit => {
+                const dayState = habit.history[todayStr] || { allDone: false, subtasks: [] };
                 const card = document.createElement('div');
-                card.className = 'glass rounded-[2.5rem] p-6 shadow-sm mb-4 border border-white/50 transition-all hover:shadow-xl relative';
-                const dayData = habit.history[todayStr] || { allDone: false, subtasks: [] };
-
+                card.className = 'glass rounded-[2.5rem] p-6 shadow-sm border border-white/50 relative overflow-hidden group';
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-5">
-                        <div class="flex-1">
-                            <span class="text-[9px] font-black text-indigo-500/40 uppercase tracking-[0.2em]">${habit.category} • ${habit.freq || 'daily'}</span>
-                            <h4 class="font-bold text-slate-800 text-lg leading-tight mt-0.5 ${dayData.allDone ? 'opacity-30' : ''}">${habit.name}</h4>
-                            <div class="mt-1 flex gap-1">
-                                ${habit.subtasks.map((_, i) => `<div class="w-4 h-1 rounded-full ${dayData.subtasks.includes(i) ? 'bg-indigo-500' : 'bg-slate-100'} transition-all"></div>`).join('')}
-                            </div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1 pr-4">
+                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${habit.category}</span>
+                            <h4 class="font-bold text-slate-800 text-lg leading-tight transition-all ${dayState.allDone ? 'opacity-30 line-through' : ''}">${habit.name}</h4>
                         </div>
-                        <div class="flex flex-col gap-2 items-center">
-                            <button class="edit-habit p-2 text-slate-300 hover:text-indigo-500 transition-colors btn-press">
+                        <div class="flex gap-2">
+                            <button class="edit-habit p-3 bg-slate-50 text-slate-300 hover:text-indigo-400 rounded-2xl transition-all btn-press">
                                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </button>
-                            <button class="main-check w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 btn-press ${dayData.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
+                            <button class="main-check w-12 h-12 rounded-2xl flex items-center justify-center transition-all btn-press ${dayState.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                             </button>
                         </div>
                     </div>
-                    <div class="subtasks-list space-y-3" data-habit-id="${habit.id}">
+                    <div class="space-y-2 subtask-list" data-habit-id="${habit.id}">
                         ${habit.subtasks.map((st, i) => `
-                            <div class="flex items-center gap-3 group draggable-item" draggable="true" data-index="${i}">
-                                <div class="drag-handle opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-300">
+                            <div class="flex items-center gap-3 p-1 rounded-lg group/item bg-transparent" data-idx="${i}">
+                                <div class="drag-handle text-slate-200 group-hover/item:text-slate-400 transition-colors">
                                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
                                 </div>
-                                <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0 transition-all" data-idx="${i}" ${dayData.subtasks.includes(i) ? 'checked' : ''}>
-                                <span class="flex-1 text-sm font-semibold transition-all ${dayData.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
+                                <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0 transition-all" data-idx="${i}" ${dayState.subtasks.includes(i) ? 'checked' : ''}>
+                                <span class="text-sm font-semibold transition-all flex-1 ${dayState.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
                             </div>
                         `).join('')}
                     </div>
-                    <div class="mt-6 pt-4 border-t border-slate-50 flex justify-between items-center">
-                         <button class="del-habit p-1 text-slate-200 hover:text-red-400 transition-colors btn-press">
+                    <div class="mt-5 pt-4 border-t border-slate-50/50 flex justify-between items-center">
+                        <button class="del-habit p-2 text-slate-200 hover:text-red-400 transition-colors">
                             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                         </button>
-                         <button class="add-sub-trigger text-[9px] font-black text-indigo-300 hover:text-indigo-500 uppercase tracking-widest">+ ${t.addSubtask}</button>
+                        </button>
+                        <button class="add-sub text-[9px] font-black text-indigo-400 hover:text-indigo-600 uppercase tracking-widest transition-colors">+ Add Subtask</button>
                     </div>
                 `;
 
-                // 事件绑定
-                card.querySelector('.main-check').onclick = () => toggleMain(habit);
-                card.querySelector('.edit-habit').onclick = () => {
-                    openModal(t.modalEditOrder, habit.name, (n, c, f) => {
-                        if(n) { habit.name = n; habit.category = c; habit.freq = f; refresh(); }
-                    }, 'habit', habit.category, habit.freq);
-                };
-                card.querySelectorAll('.sub-check').forEach(cb => {
-                    cb.onclick = () => toggleSub(habit, parseInt(cb.dataset.idx));
+                // Subtask Sortable
+                const subList = card.querySelector('.subtask-list');
+                new Sortable(subList, {
+                    animation: 150,
+                    handle: '.drag-handle',
+                    ghostClass: 'sortable-ghost',
+                    onEnd: (evt) => {
+                        const hId = parseInt(subList.dataset.habitId);
+                        const h = habits.find(x => x.id === hId);
+                        const item = h.subtasks.splice(evt.oldIndex, 1)[0];
+                        h.subtasks.splice(evt.newIndex, 0, item);
+                        // History indices need to be reset or cleared when reordering for consistency
+                        if(h.history[todayStr]) h.history[todayStr].subtasks = [];
+                        refresh();
+                    }
                 });
-                card.querySelector('.add-sub-trigger').onclick = () => {
-                    openModal(t.modalSubtask, "", (txt) => { if(txt){habit.subtasks.push(txt); refresh();} });
-                };
-                card.querySelector('.del-habit').onclick = () => {
-                    if(confirm(t.confirmDelete)){ habits=habits.filter(h=>h.id!==habit.id); refresh(); }
+
+                // Events
+                card.querySelector('.main-check').onclick = () => {
+                    if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
+                    const d = habit.history[todayStr];
+                    if(d.allDone) { delete habit.history[todayStr]; }
+                    else { d.allDone = true; d.subtasks = habit.subtasks.map((_, i) => i); playFeedbackSound(); confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 }, colors: ['#6366f1'] }); }
+                    refresh();
                 };
 
-                // 拖拽逻辑实现
-                initDragAndDrop(card.querySelector('.subtasks-list'), habit);
+                card.querySelectorAll('.sub-check').forEach(cb => {
+                    cb.onclick = () => {
+                        if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
+                        const d = habit.history[todayStr];
+                        const idx = parseInt(cb.dataset.idx);
+                        const pos = d.subtasks.indexOf(idx);
+                        if(pos > -1) d.subtasks.splice(pos, 1);
+                        else { d.subtasks.push(idx); playFeedbackSound(); }
+                        const wasAllDone = d.allDone;
+                        d.allDone = habit.subtasks.length > 0 && d.subtasks.length === habit.subtasks.length;
+                        if(d.allDone && !wasAllDone) { playFeedbackSound(); confetti({ particleCount: 80, spread: 50 }); }
+                        refresh();
+                    };
+                });
+
+                card.querySelector('.add-sub').onclick = () => {
+                    openModal('拆解子任务', "", (txt) => { if(txt) { habit.subtasks.push(txt); refresh(); } });
+                };
+
+                card.querySelector('.edit-habit').onclick = () => {
+                    openModal('编辑卡片', habit.name, (name, cat, freq) => {
+                        habit.name = name;
+                        habit.category = cat;
+                        habit.freq = freq;
+                        refresh();
+                    }, 'habit', habit.category, habit.freq);
+                };
+
+                card.querySelector('.del-habit').onclick = () => {
+                    habits = habits.filter(h => h.id !== habit.id);
+                    refresh();
+                };
 
                 container.appendChild(card);
             });
         }
 
-        function initDragAndDrop(container, habit) {
-            let dragIdx = null;
-            container.addEventListener('dragstart', (e) => {
-                const item = e.target.closest('.draggable-item');
-                if (!item) return;
-                dragIdx = parseInt(item.dataset.index);
-                item.classList.add('dragging');
-            });
-
-            container.addEventListener('dragend', (e) => {
-                const item = e.target.closest('.draggable-item');
-                if (item) item.classList.remove('dragging');
-            });
-
-            container.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                const afterElement = getDragAfterElement(container, e.clientY);
-                const draggingItem = container.querySelector('.dragging');
-                if (afterElement == null) {
-                    container.appendChild(draggingItem);
-                } else {
-                    container.insertBefore(draggingItem, afterElement);
-                }
-            });
-
-            container.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const items = Array.from(container.querySelectorAll('.draggable-item'));
-                const newOrder = items.map(item => habit.subtasks[parseInt(item.dataset.index)]);
-
-                // 更新 habit 对象
-                habit.subtasks = newOrder;
-
-                // 同时更新打卡历史记录中的索引（可选，复杂，此处采取直接重置今日打卡以防索引错乱或简单刷新）
-                if(habit.history[todayStr]) habit.history[todayStr].subtasks = [];
-                refresh();
-            });
-        }
-
-        function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.draggable-item:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
-
-        function toggleMain(habit) {
-            if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
-            const data = habit.history[todayStr];
-            if (data.allDone) {
-                delete habit.history[todayStr];
-            } else {
-                data.allDone = true;
-                data.subtasks = habit.subtasks.map((_, i) => i);
-                playSuccessSound();
-                confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 }, colors: ['#6366f1', '#4f46e5'] });
-            }
-            refresh();
-        }
-
-        function toggleSub(habit, subIdx) {
-            if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
-            const data = habit.history[todayStr];
-            const i = data.subtasks.indexOf(subIdx);
-            if (i > -1) data.subtasks.splice(i, 1); else data.subtasks.push(subIdx);
-            const wasDone = data.allDone;
-            data.allDone = habit.subtasks.length > 0 && data.subtasks.length === habit.subtasks.length;
-            if (data.allDone && !wasDone) {
-                playSuccessSound();
-                confetti({ particleCount: 70, spread: 50 });
-            }
-            refresh();
-        }
-
-        function openModal(title, initialValue, callback, type = 'text', currentCatVal = '', currentFreqVal = 'daily') {
-            const modal = document.getElementById('ui-modal');
-            const content = document.getElementById('modal-content');
-            const input = document.getElementById('modal-input');
-            const select = document.getElementById('modal-select');
-            const freqSelect = document.getElementById('modal-freq');
-            const habitExtras = document.getElementById('modal-habit-extras');
-            const textarea = document.getElementById('modal-textarea');
-            const t = i18n[currentLang];
-
+        // --- UI Modals ---
+        function openModal(title, val, cb, type='text', catVal='', freqVal='daily') {
+            modalCallback = cb;
             document.getElementById('modal-title').innerText = title;
-            modalCallback = callback;
+            document.getElementById('ui-modal').classList.replace('hidden', 'flex');
 
-            [input, habitExtras, textarea].forEach(el => el.classList.add('hidden'));
+            const sections = ['modal-input', 'modal-habit-extras', 'settings-extras'];
+            sections.forEach(s => document.getElementById(s).classList.add('hidden'));
 
-            if (type === 'habit') {
-                input.classList.remove('hidden'); input.value = initialValue; input.placeholder = t.modalPlaceholder;
-                habitExtras.classList.remove('hidden');
-                select.innerHTML = categories.map(c => `<option value="${c.name}" ${c.name === currentCatVal ? 'selected' : ''}>${c.name}</option>`).join('');
-                freqSelect.value = currentFreqVal;
-            } else if (type === 'backup') {
-                textarea.classList.remove('hidden'); textarea.value = initialValue;
+            if(type === 'habit') {
+                document.getElementById('modal-input').classList.remove('hidden');
+                document.getElementById('modal-input').value = val;
+                document.getElementById('modal-habit-extras').classList.remove('hidden');
+                document.getElementById('modal-select').innerHTML = categories.map(c => `<option value="${c.name}" ${c.name === catVal ? 'selected' : ''}>${c.name}</option>`).join('');
+                document.getElementById('modal-freq').value = freqVal;
+            } else if(type === 'settings') {
+                document.getElementById('settings-extras').classList.remove('hidden');
+                document.getElementById('modal-input').classList.add('hidden');
+                document.getElementById('modal-textarea').value = JSON.stringify({categories, habits}, null, 2);
+                updateSoundUI();
             } else {
-                input.classList.remove('hidden'); input.value = initialValue; input.placeholder = t.modalPlaceholder;
+                document.getElementById('modal-input').classList.remove('hidden');
+                document.getElementById('modal-input').value = val;
             }
 
-            modal.classList.remove('hidden'); modal.classList.add('flex');
-            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+            setTimeout(() => {
+                const content = document.getElementById('modal-content');
+                content.classList.replace('scale-95', 'scale-100');
+                content.classList.replace('opacity-0', 'opacity-100');
+            }, 10);
         }
 
         function closeModal() {
-            const modal = document.getElementById('ui-modal');
             const content = document.getElementById('modal-content');
-            content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 200);
+            content.classList.replace('scale-100', 'scale-95');
+            content.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => document.getElementById('ui-modal').classList.replace('flex', 'hidden'), 200);
         }
 
+        function updateSoundUI() {
+            document.querySelectorAll('.sound-btn').forEach(btn => {
+                if(btn.dataset.sound === currentSound) {
+                    btn.classList.add('border-indigo-600', 'text-indigo-600', 'bg-indigo-50');
+                } else {
+                    btn.classList.remove('border-indigo-600', 'text-indigo-600', 'bg-indigo-50');
+                }
+            });
+        }
+
+        // --- Event Listeners ---
+        document.querySelectorAll('.sound-btn').forEach(btn => {
+            btn.onclick = () => { currentSound = btn.dataset.sound; updateSoundUI(); playFeedbackSound(); };
+        });
+
         document.getElementById('modal-confirm').onclick = () => {
-            const val = document.getElementById('modal-input').value.trim();
-            const selVal = document.getElementById('modal-select').value;
+            const inputVal = document.getElementById('modal-input').value;
+            const catVal = document.getElementById('modal-select').value;
             const freqVal = document.getElementById('modal-freq').value;
-            const textVal = document.getElementById('modal-textarea').value.trim();
-            if (modalCallback) {
-                if (!document.getElementById('modal-habit-extras').classList.contains('hidden')) modalCallback(val, selVal, freqVal);
-                else if (!document.getElementById('modal-textarea').classList.contains('hidden')) modalCallback(textVal);
-                else modalCallback(val);
-                closeModal();
+            const rawData = document.getElementById('modal-textarea').value;
+
+            if(!document.getElementById('settings-extras').classList.contains('hidden')) {
+                try {
+                    const parsed = JSON.parse(rawData);
+                    habits = parsed.habits;
+                    categories = parsed.categories;
+                } catch(e) {}
+                refresh();
+            } else if(!document.getElementById('modal-habit-extras').classList.contains('hidden')) {
+                modalCallback(inputVal, catVal, freqVal);
+            } else {
+                modalCallback(inputVal);
             }
+            closeModal();
         };
 
         document.getElementById('modal-cancel').onclick = closeModal;
         document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; refresh(); };
-        document.getElementById('main-add-btn').onclick = () => {
-            const t = i18n[currentLang];
-            openModal(t.modalNewOrder, "", (n, c, f) => { if(n){habits.push({id:Date.now(),name:n,category:c,freq:f,subtasks:[],history:{}}); refresh();} }, 'habit');
-        };
-        document.getElementById('add-cat-trigger').onclick = () => {
-            const t = i18n[currentLang];
-            openModal(t.modalNewCat, "", (n) => { if(n && !categories.find(c=>c.name===n)){categories.push({id:Date.now().toString(),name:n}); refresh();} });
-        };
-        document.getElementById('btn-data-manage').onclick = () => {
-            const t = i18n[currentLang];
-            openModal(t.modalBackup, JSON.stringify({categories, habits}, null, 2), (j) => { try{ const p=JSON.parse(j); if(p.categories&&p.habits){categories=p.categories; habits=p.habits; refresh();}}catch(e){alert(t.formatError);} }, 'backup');
-        };
+        document.getElementById('btn-settings').onclick = () => openModal('系统设置', "", null, 'settings');
+        document.getElementById('add-cat-trigger').onclick = () => openModal('新分类', "", (n) => { if(n){categories.push({id:Date.now().toString(),name:n}); refresh();} });
+        document.getElementById('main-add-btn').onclick = () => openModal('构建新秩序', "", (n,c,f) => {
+            if(n) { habits.push({ id: Date.now(), name: n, category: c, freq: f, subtasks: [], history: {} }); refresh(); }
+        }, 'habit');
 
         refresh();
     </script>
