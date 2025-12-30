@@ -1,10 +1,376 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Progress Obsession | 进度条强迫症</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
 
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg-soft: #fbfcfe;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-soft);
+            color: #1e293b;
+            -webkit-tap-highlight-color: transparent;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .tab-active { color: var(--primary); font-weight: 800; position: relative; }
+        .tab-active::after { content: ''; position: absolute; bottom: -4px; left: 20%; width: 60%; height: 3px; background: var(--primary); border-radius: 10px; }
+
+        .btn-check-active {
+            background: var(--primary);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-press:active { transform: scale(0.92); }
+
+        /* 秩序热力图样式 */
+        .day-box { width: 12px; height: 12px; border-radius: 3px; background: #e2e8f0; transition: all 0.3s; }
+        .day-box.completed { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+
+        .custom-scrollbar::-webkit-scrollbar { display: none; }
+
+        .task-done { text-decoration: line-through; opacity: 0.5; }
+
+        /* 极简进度条动画 */
+        #progress-bar { transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    </style>
+</head>
+<body class="min-h-screen pb-28">
+    <div id="app" class="max-w-lg mx-auto px-5 pt-8">
+        <!-- 头部 -->
+        <header class="flex justify-between items-start mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Progress Obsession<span class="text-indigo-600">.</span></h1>
+                <p id="today-date" class="text-slate-400 text-[10px] font-bold uppercase mt-1 tracking-[0.2em]"></p>
+            </div>
+            <div class="flex gap-3">
+                <button id="btn-data-manage" class="glass text-slate-500 p-3 rounded-2xl btn-press shadow-sm" title="数据存档">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                </button>
+                <button id="main-add-btn" class="bg-indigo-600 text-white p-3 rounded-2xl shadow-xl shadow-indigo-200 btn-press">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- 统计面板 -->
+        <div class="glass rounded-[2.5rem] p-6 mb-8 shadow-sm relative overflow-hidden border border-white/60">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">连胜纪录 (Streak)</p>
+                    <div class="flex items-baseline gap-1">
+                        <span id="stat-streak" class="text-4xl font-black text-slate-800">0</span>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-tighter">Days</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">秩序热力图</p>
+                    <div id="week-view" class="flex gap-1.5 justify-end">
+                        <!-- 周视图小方块由 JS 生成 -->
+                    </div>
+                </div>
+            </div>
+            <div class="bg-indigo-50/50 rounded-2xl p-4 flex justify-between items-center">
+                <div class="flex flex-col">
+                    <span class="text-indigo-600 text-[10px] font-black uppercase tracking-tighter">Today's Progress</span>
+                    <span class="text-slate-800 text-xs font-bold"><span id="stat-total">0</span> / <span id="stat-goal">0</span> 项达成</span>
+                </div>
+                <div class="h-2 w-32 bg-indigo-100 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-indigo-600" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分类切换 -->
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-100">
+            <nav id="category-tabs" class="flex gap-6 overflow-x-auto pb-3 custom-scrollbar flex-1"></nav>
+            <button id="add-cat-trigger" class="pb-3 px-2 text-slate-300 hover:text-indigo-600 font-bold text-xl btn-press" title="增加分类">+</button>
+        </div>
+
+        <!-- 任务列表 -->
+        <div id="habits-container" class="space-y-5"></div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div id="ui-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl transition-all scale-95 opacity-0" id="modal-content">
+            <h3 id="modal-title" class="text-xl font-extrabold mb-6 text-slate-800 tracking-tight">构建新的秩序</h3>
+            <div id="modal-body" class="space-y-4">
+                <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium" placeholder="在此输入项目名称...">
+                <select id="modal-select" class="hidden w-full px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-slate-700 font-medium"></select>
+                <textarea id="modal-textarea" class="hidden w-full h-48 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none text-[10px] font-mono leading-relaxed text-slate-500"></textarea>
+            </div>
+            <div id="modal-footer" class="flex gap-4 mt-8">
+                <button id="modal-cancel" class="flex-1 py-4 text-slate-400 font-bold text-xs uppercase tracking-[0.2em] btn-press">Cancel</button>
+                <button id="modal-confirm" class="flex-1 bg-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100 btn-press uppercase tracking-[0.2em]">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 音效逻辑
+        const successSnd = new Audio('data:audio/wav;base64,UklGRnoAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA');
+        function playSuccessSound() {
+            try { successSnd.cloneNode().play(); } catch(e) {}
+            if (window.navigator.vibrate) window.navigator.vibrate(50);
+        }
+
+        // 初始化数据
+        let categories = JSON.parse(localStorage.getItem('habits_categories_v7')) || [
+            { id: '1', name: '日常' },
+            { id: '2', name: '学习' }
+        ];
+
+        let habits = JSON.parse(localStorage.getItem('habits_v7')) || [];
+
+        let currentCat = '全部';
+        const todayStr = new Date().toISOString().split('T')[0];
+        let modalCallback = null;
+
+        function refresh() {
+            renderTabs();
+            renderHabits();
+            updateStats();
+            saveData();
+        }
+
+        function saveData() {
+            localStorage.setItem('habits_categories_v7', JSON.stringify(categories));
+            localStorage.setItem('habits_v7', JSON.stringify(habits));
+        }
+
+        function updateStats() {
+            const datesWithCheckins = new Set();
+            let todayFinished = 0;
+
+            habits.forEach(h => {
+                Object.keys(h.history).forEach(date => {
+                    if (h.history[date].allDone) {
+                        datesWithCheckins.add(date);
+                        if(date === todayStr) todayFinished++;
+                    }
+                });
+            });
+
+            // 连胜计算
+            let streak = 0;
+            let checkDate = new Date();
+            while (true) {
+                const dateKey = checkDate.toISOString().split('T')[0];
+                if (datesWithCheckins.has(dateKey)) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    // 如果今天还没完，但昨天完了，连胜不应该断
+                    if (dateKey === todayStr && streak === 0) {
+                        checkDate.setDate(checkDate.getDate() - 1);
+                        continue;
+                    }
+                    break;
+                }
+            }
+
+            document.getElementById('stat-total').innerText = todayFinished;
+            document.getElementById('stat-goal').innerText = habits.length;
+            document.getElementById('stat-streak').innerText = streak;
+
+            const progress = habits.length > 0 ? (todayFinished / habits.length) * 100 : 0;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // 热力图
+            const weekView = document.getElementById('week-view');
+            weekView.innerHTML = '';
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dKey = d.toISOString().split('T')[0];
+                const box = document.createElement('div');
+                box.className = `day-box ${datesWithCheckins.has(dKey) ? 'completed' : ''}`;
+                box.title = dKey;
+                weekView.appendChild(box);
+            }
+        }
+
+        function renderTabs() {
+            const nav = document.getElementById('category-tabs');
+            nav.innerHTML = '';
+
+            const createTab = (name, label) => {
+                const btn = document.createElement('button');
+                btn.className = `pb-1 text-[10px] font-black uppercase tracking-widest whitespace-nowrap btn-press transition-all ${currentCat === name ? 'tab-active' : 'text-slate-300'}`;
+                btn.innerText = label;
+                btn.onclick = () => { currentCat = name; refresh(); };
+                return btn;
+            };
+
+            nav.appendChild(createTab('全部', 'All Systems'));
+            categories.forEach(cat => nav.appendChild(createTab(cat.name, cat.name)));
+        }
+
+        function renderHabits() {
+            const container = document.getElementById('habits-container');
+            container.innerHTML = '';
+            const filtered = currentCat === '全部' ? habits : habits.filter(h => h.category === currentCat);
+
+            if(filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-24 opacity-20"><p class="text-slate-900 text-[10px] font-black uppercase tracking-[0.3em]">No Obsessions Found.</p></div>`;
+                return;
+            }
+
+            filtered.forEach(habit => {
+                const card = document.createElement('div');
+                card.className = 'glass rounded-[2.5rem] p-6 shadow-sm mb-4 border border-white/50 transition-all hover:shadow-xl';
+                const dayData = habit.history[todayStr] || { allDone: false, subtasks: [] };
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-5">
+                        <div class="flex-1">
+                            <span class="text-[9px] font-black text-indigo-500/40 uppercase tracking-[0.2em]">${habit.category}</span>
+                            <h4 class="font-bold text-slate-800 text-lg leading-tight mt-0.5 ${dayData.allDone ? 'opacity-30' : ''}">${habit.name}</h4>
+                        </div>
+                        <button class="main-check w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 btn-press ${dayData.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
+                            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        ${habit.subtasks.map((st, i) => `
+                            <div class="flex items-center gap-3 group">
+                                <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0 transition-all" data-idx="${i}" ${dayData.subtasks.includes(i) ? 'checked' : ''}>
+                                <span class="flex-1 text-sm font-semibold transition-all ${dayData.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
+                            </div>
+                        `).join('')}
+                        <button class="add-sub-trigger w-full py-3 mt-2 border-2 border-dashed border-slate-100 rounded-2xl text-[9px] text-slate-300 font-black uppercase tracking-widest hover:border-indigo-100 hover:text-indigo-400 transition-all">Add Subtask / 拆解步骤</button>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-50 flex justify-between items-center">
+                         <button class="del-habit text-[9px] font-black text-slate-200 hover:text-red-300 transition-colors uppercase tracking-widest">Discard / 丢弃</button>
+                         <div class="flex gap-2 items-center">
+                            <div class="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Daily Unit</div>
+                            <span class="day-box ${dayData.allDone ? 'completed' : ''}"></span>
+                         </div>
+                    </div>
+                `;
+
+                card.querySelector('.main-check').onclick = () => toggleMain(habit);
+                card.querySelectorAll('.sub-check').forEach(cb => {
+                    cb.onclick = () => toggleSub(habit, parseInt(cb.dataset.idx));
+                });
+                card.querySelector('.add-sub-trigger').onclick = () => {
+                    openModal("拆解任务", "", (txt) => { if(txt){habit.subtasks.push(txt); refresh();} });
+                };
+                card.querySelector('.del-habit').onclick = () => {
+                    if(confirm("确定要丢弃这项计划吗？这可能会破坏你的连胜曲线。")){ habits=habits.filter(h=>h.id!==habit.id); refresh(); }
+                };
+                container.appendChild(card);
+            });
+        }
+
+        function toggleMain(habit) {
+            if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
+            const data = habit.history[todayStr];
+            if (data.allDone) {
+                delete habit.history[todayStr];
+            } else {
+                data.allDone = true;
+                data.subtasks = habit.subtasks.map((_, i) => i);
+                playSuccessSound();
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 }, colors: ['#6366f1', '#4f46e5', '#ffffff'] });
+            }
+            refresh();
+        }
+
+        function toggleSub(habit, subIdx) {
+            if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
+            const data = habit.history[todayStr];
+            const i = data.subtasks.indexOf(subIdx);
+            if (i > -1) data.subtasks.splice(i, 1); else data.subtasks.push(subIdx);
+
+            const wasDone = data.allDone;
+            data.allDone = habit.subtasks.length > 0 && data.subtasks.length === habit.subtasks.length;
+
+            if (data.allDone && !wasDone) {
+                playSuccessSound();
+                confetti({ particleCount: 70, spread: 50, scale: 0.8 });
+            }
+            refresh();
+        }
+
+        function openModal(title, initialValue, callback, type = 'text') {
+            const modal = document.getElementById('ui-modal');
+            const content = document.getElementById('modal-content');
+            const input = document.getElementById('modal-input');
+            const select = document.getElementById('modal-select');
+            const textarea = document.getElementById('modal-textarea');
+
+            document.getElementById('modal-title').innerText = title;
+            modalCallback = callback;
+            [input, select, textarea].forEach(el => el.classList.add('hidden'));
+
+            if (type === 'habit') {
+                input.classList.remove('hidden'); input.value = ""; input.placeholder = "给你的计划命名...";
+                select.classList.remove('hidden'); select.innerHTML = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            } else if (type === 'backup') {
+                textarea.classList.remove('hidden'); textarea.value = initialValue;
+            } else {
+                input.classList.remove('hidden'); input.value = initialValue;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('ui-modal');
+            const content = document.getElementById('modal-content');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        document.getElementById('modal-confirm').onclick = () => {
+            const val = document.getElementById('modal-input').value.trim();
+            const selVal = document.getElementById('modal-select').value;
+            const textVal = document.getElementById('modal-textarea').value.trim();
+            if (modalCallback) {
+                if (!document.getElementById('modal-select').classList.contains('hidden')) modalCallback(val, selVal);
+                else if (!document.getElementById('modal-textarea').classList.contains('hidden')) modalCallback(textVal);
+                else modalCallback(val);
+                closeModal();
+            }
+        };
+        document.getElementById('modal-cancel').onclick = closeModal;
+
+        document.getElementById('main-add-btn').onclick = () => openModal("构建新的秩序", "", (n, c) => { if(n){habits.push({id:Date.now(),name:n,category:c,subtasks:[],history:{}}); refresh();} }, 'habit');
+        document.getElementById('add-cat-trigger').onclick = () => openModal("新增分类系统", "", (n) => { if(n && !categories.find(c=>c.name===n)){categories.push({id:Date.now().toString(),name:n}); refresh();} });
+        document.getElementById('btn-data-manage').onclick = () => openModal("数据同步/云端存档", JSON.stringify({categories, habits}, null, 2), (j) => { try{ const p=JSON.parse(j); if(p.categories&&p.habits){categories=p.categories; habits=p.habits; refresh();}}catch(e){alert("格式校验失败");} }, 'backup');
+
+        // 初始化日期显示
+        const updateDate = () => {
+            const now = new Date();
+            document.getElementById('today-date').innerText = now.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
+        };
+
+        updateDate();
+        refresh();
+    </script>
 </body>
 </html>
