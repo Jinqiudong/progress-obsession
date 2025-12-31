@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; -webkit-tap-highlight-color: transparent; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -24,11 +25,14 @@
 </head>
 <body class="min-h-screen pb-32">
 
-    <div id="loading" class="fixed inset-0 bg-white z-[100] flex items-center justify-center">
-        <div class="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+    <!-- Loading Overlay -->
+    <div id="loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
+        <div class="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <p class="text-xs font-bold text-slate-400 animate-pulse">Initializing Environment...</p>
     </div>
 
     <div id="app" class="max-w-md mx-auto px-6 pt-10">
+        <!-- Main Page -->
         <section id="page-checkin" class="page-content page-active">
             <header class="flex justify-between items-center mb-6">
                 <div>
@@ -43,11 +47,13 @@
             <div id="habits-container" class="space-y-6"></div>
         </section>
 
+        <!-- Insights Page -->
         <section id="page-insight" class="page-content py-10 text-center">
             <h2 class="text-xl font-black mb-8 italic text-left">Analytics.</h2>
             <div class="glass p-10 rounded-[2.5rem] text-slate-400 font-bold text-sm">Data visualization coming soon...</div>
         </section>
 
+        <!-- Config Page -->
         <section id="page-config" class="page-content py-10">
             <h2 class="text-xl font-black mb-8 italic" id="ui-config-title">Config.</h2>
             <div class="space-y-4">
@@ -73,6 +79,7 @@
         </section>
     </div>
 
+    <!-- Navigation -->
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[300px] glass rounded-full flex justify-around items-center py-3 px-2 z-50 shadow-xl border-white/50">
         <button data-target="page-checkin" class="tab-btn p-3 text-indigo-600 tab-active">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -85,6 +92,7 @@
         </button>
     </nav>
 
+    <!-- Modal System -->
     <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto relative no-scrollbar">
             <h3 class="text-xl font-black mb-6 italic" id="modal-title">Settings.</h3>
@@ -102,70 +110,112 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-intl-v1';
+        // Environment Variables (Safety Handling)
+        const getEnvConfig = () => {
+            try {
+                if (typeof __firebase_config !== 'undefined') return JSON.parse(__firebase_config);
+            } catch(e) {}
+            return null;
+        };
 
+        const configData = getEnvConfig();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-v1';
+
+        let db = null;
+        let auth = null;
         let user = null;
         let habits = [];
-        let categories = [
-            { id: 'daily', name: 'Daily' },
-            { id: 'work', name: 'Work' }
-        ];
+        let categories = [{ id: 'daily', name: 'Daily' }, { id: 'work', name: 'Work' }];
         let activeCat = 'ALL';
         let config = { sound: true, lang: 'zh' };
         let timerInterval = null;
-        const getTodayKey = () => new Date().toISOString().split('T')[0];
 
-        const EMOJI_LIST = ['😀', '🏃', '📚', '🧘', '💧', '🍎', '💪', '💻', '🎨', '🎹', '🌱', '🧹', '🍵', '💤', '✍️', '🏀', '✨', '🔥', '🧠', '👀', '⚽️', '🚲', '🎸', '🎮', '☕️', '⏰', '🔋', '📱', '💡', '📅', '🐶', '🌸', '🌊'];
+        const getTodayKey = () => new Date().toISOString().split('T')[0];
+        const EMOJI_LIST = ['🏃', '📚', '🧘', '💧', '🍎', '💪', '💻', '🎨', '🎹', '🌱', '🧹', '🍵', '💤', '✍️', '✨', '🔥', '🧠', '☕️', '⏰'];
 
         const I18N = {
             zh: {
                 title: '专注.', config: '配置.', sound: '音效开关', lang: '语言设置', add: '新建习惯',
-                name: '习惯名称', type: '记录模式', unit: '单位', deleteQ: '确定删除吗？',
-                cat: '所属分类', emoji: '选择图标', all: '全部',
+                name: '习惯名称', type: '模式', unit: '单位', deleteQ: '确定删除吗？',
+                cat: '分类', emoji: '图标', all: '全部',
                 cats: { daily: '日常', work: '工作' }
             },
             en: {
                 title: 'Focus.', config: 'Config.', sound: 'Sound FX', lang: 'Language', add: 'New Habit',
                 name: 'Habit Name', type: 'Mode', unit: 'Unit', deleteQ: 'Confirm Delete?',
-                cat: 'Category', emoji: 'Select Icon', all: 'All',
+                cat: 'Category', emoji: 'Icon', all: 'All',
                 cats: { daily: 'Daily', work: 'Work' }
             }
         };
 
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
+        // Initialize Firebase ONLY if config is present
+        const initApp = async () => {
+            if (configData) {
+                try {
+                    const firebaseApp = initializeApp(configData);
+                    auth = getAuth(firebaseApp);
+                    db = getFirestore(firebaseApp);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, u => {
+                        user = u;
+                        if (user) {
+                            onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), snap => {
+                                if (snap.exists()) {
+                                    const d = snap.data();
+                                    habits = d.habits || [];
+                                    categories = d.categories || categories;
+                                    config = { ...config, ...(d.config || {}) };
+                                }
+                                finishLoading();
+                            }, (err) => {
+                                console.error("Firestore error:", err);
+                                finishLoading();
+                            });
+                        }
+                    });
+                } catch (e) {
+                    console.error("Firebase Init Error:", e);
+                    finishLoading();
+                }
             } else {
-                await signInAnonymously(auth);
+                // No Firebase config? Local Demo Mode
+                console.warn("No Firebase config found. Running in Local Mode.");
+                const localData = localStorage.getItem('focus_backup');
+                if (localData) {
+                    const d = JSON.parse(localData);
+                    habits = d.habits || [];
+                    config = d.config || config;
+                }
+                finishLoading();
             }
         };
-        initAuth();
 
-        onAuthStateChanged(auth, u => {
-            user = u;
-            if (user) {
-                onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), snap => {
-                    if (snap.exists()) {
-                        const d = snap.data();
-                        habits = d.habits || [];
-                        categories = d.categories || categories;
-                        config = { ...config, ...(d.config || {}) };
-                    }
-                    applyConfig();
-                    render();
-                    document.getElementById('loading').style.display = 'none';
-                }, (error) => console.error(error));
+        function finishLoading() {
+            applyConfig();
+            render();
+            const loader = document.getElementById('loading');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 300);
             }
-        });
+        }
 
         async function sync() {
-            if (!user) return;
-            try { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), { habits, categories, config }); } catch (e) { console.error(e); }
+            if (user && db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), { habits, categories, config });
+                } catch (e) { console.error("Sync Error:", e); }
+            }
+            localStorage.setItem('focus_backup', JSON.stringify({ habits, config }));
         }
+
+        // --- UI Functions ---
 
         function applyConfig() {
             const L = I18N[config.lang];
@@ -175,16 +225,14 @@
             document.getElementById('ui-lang').innerText = L.lang;
             document.getElementById('select-lang').value = config.lang;
 
-            // 开关开启时显示绿色，关闭时显示灰色
-            document.getElementById('btn-sound').className = `w-12 h-6 rounded-full relative transition-colors ${config.sound ? 'bg-green-500' : 'bg-slate-200'}`;
+            const btn = document.getElementById('btn-sound');
+            btn.className = `w-12 h-6 rounded-full relative transition-colors ${config.sound ? 'bg-green-500' : 'bg-slate-200'}`;
             document.getElementById('sound-knob').style.transform = config.sound ? 'translateX(24px)' : 'translateX(0px)';
         }
 
         function getCategoryDisplayName(cat) {
             const L = I18N[config.lang];
-            if (cat.id === 'daily' || cat.id === 'work') {
-                return L.cats[cat.id];
-            }
+            if (cat.id === 'daily' || cat.id === 'work') return L.cats[cat.id];
             return cat.name;
         }
 
@@ -198,7 +246,7 @@
                 `<button onclick="window.addCategory()" class="w-9 h-9 rounded-full bg-white text-indigo-400 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-sm">+</button>`;
 
             const filtered = activeCat === 'ALL' ? habits : habits.filter(h => h.cat === activeCat);
-            document.getElementById('habits-container').innerHTML = filtered.map(h => renderHabitCard(h)).join('');
+            document.getElementById('habits-container').innerHTML = filtered.length ? filtered.map(h => renderHabitCard(h)).join('') : `<div class="py-20 text-center opacity-20 font-bold text-sm">Empty here.</div>`;
             initSortable();
         }
 
@@ -226,16 +274,14 @@
                         </div>
                         <button onclick="window.editHabitDetails(${h.id})" class="p-2 text-slate-300"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                     </div>
-
-                    ${h.type !== 'check' ? `<div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4"><div class="flex-1"><p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Today's Progress</p><p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + (h.unit||'min')}</p></div></div>` : ''}
-
+                    ${h.type !== 'check' ? `<div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4"><div class="flex-1"><p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Today</p><p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + (h.unit||'min')}</p></div></div>` : ''}
                     <div class="space-y-3 mb-6 sub-tasks" data-id="${h.id}">
                         ${(h.steps || []).map((step, idx) => {
                             const subHist = hist.subData?.[idx] || { val: 0, timer: 0 };
                             const done = hist.subDone?.includes(idx);
                             return `
                             <div class="subtask-row flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-slate-50">
-                                <span class="drag-handle opacity-20 text-[10px] cursor-grab active:cursor-grabbing">⋮⋮</span>
+                                <span class="drag-handle opacity-20 text-[10px] cursor-grab">⋮⋮</span>
                                 <input type="checkbox" ${done?'checked':''} onchange="window.toggleSubDone(${h.id}, ${idx})" class="w-5 h-5 rounded-md border-2 border-slate-100 appearance-none checked:bg-indigo-600 transition-all">
                                 <span class="text-sm font-bold flex-1 truncate ${done?'task-done text-slate-300':''}">${step}</span>
                                 <div class="flex items-center gap-2">
@@ -246,7 +292,6 @@
                             </div>`;
                         }).join('')}
                     </div>
-
                     <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
                         <button onclick="window.confirmDeleteHabit(${h.id})" class="p-2 text-slate-200 hover:text-red-400 active:scale-90 transition-transform"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                         <div class="flex items-center gap-4">
@@ -260,164 +305,8 @@
             `;
         }
 
-        // --- Core Logic ---
-
-        window.addHabit = () => {
-            const L = I18N[config.lang];
-            let selectedEmoji = EMOJI_LIST[0];
-
-            const html = `
-                <div class="space-y-4">
-                    <input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold border-none outline-none focus:ring-2 ring-indigo-100 transition-all">
-                    <div class="p-1">
-                        <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p>
-                        <div class="grid grid-cols-8 gap-2">
-                            ${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.cat}</p>
-                        <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs appearance-none border-none outline-none">
-                            ${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="space-y-2">
-                            <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.type}</p>
-                            <select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs appearance-none border-none outline-none">
-                                <option value="check">Check</option>
-                                <option value="timer">Timer</option>
-                                <option value="input">Value</option>
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.unit}</p>
-                            <input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs border-none outline-none">
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            window.currentEmoji = selectedEmoji;
-            window.selectEmoji = (btn, e) => {
-                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                window.currentEmoji = e;
-            };
-
-            openModal(L.add, html, () => {
-                const name = document.getElementById('h-name').value;
-                if(name) {
-                    habits.push({
-                        id: Date.now(),
-                        name,
-                        emoji: window.currentEmoji,
-                        cat: document.getElementById('h-cat').value,
-                        type: document.getElementById('h-type').value,
-                        unit: document.getElementById('h-unit').value,
-                        steps: [],
-                        history: { [getTodayKey()]: { done: false, subData: {}, subDone: [] } }
-                    });
-                    sync(); render();
-                }
-            });
-        };
-
-        window.editHabitDetails = (id) => {
-            const h = habits.find(x => x.id === id);
-            if(!h) return;
-            const L = I18N[config.lang];
-            let selectedEmoji = h.emoji || EMOJI_LIST[0];
-
-            const html = `
-                <div class="space-y-4">
-                    <input id="h-name" value="${h.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold border-none outline-none">
-                    <div class="p-1">
-                        <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p>
-                        <div class="grid grid-cols-8 gap-2">
-                            ${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}
-                        </div>
-                    </div>
-                    <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
-                        ${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}
-                    </select>
-                </div>
-            `;
-
-            window.currentEmoji = selectedEmoji;
-            window.selectEmoji = (btn, e) => {
-                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                window.currentEmoji = e;
-            };
-
-            openModal("Edit Habit", html, () => {
-                h.name = document.getElementById('h-name').value;
-                h.emoji = window.currentEmoji;
-                h.cat = document.getElementById('h-cat').value;
-                sync(); render();
-            });
-        };
-
-        window.addCategory = () => {
-            openModal("New Category", `<input id="cat-name" placeholder="Category Name (e.g. Study)" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-none">`, () => {
-                const name = document.getElementById('cat-name').value;
-                if(name) {
-                    categories.push({ id: 'cat_' + Date.now(), name });
-                    sync(); render();
-                }
-            });
-        };
-
-        window.editCategory = (catId) => {
-            if(catId === 'daily' || catId === 'work') return; // 锁定系统分类
-            const c = categories.find(x => x.id === catId);
-            if(!c) return;
-            const delBtn = document.getElementById('modal-delete-sec');
-            delBtn.classList.remove('hidden');
-            delBtn.onclick = () => {
-                categories = categories.filter(x => x.id !== catId);
-                habits.forEach(h => { if(h.cat === catId) h.cat = 'daily'; });
-                modal.classList.add('hidden');
-                sync(); render();
-            };
-
-            openModal("Edit Category", `<input id="cat-name" value="${c.name}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
-                c.name = document.getElementById('cat-name').value;
-                sync(); render();
-            });
-        };
-
-        window.getHabitStats = (h) => {
-            const hist = h.history?.[getTodayKey()] || { done: false, subData: {} };
-            let totalVal = 0, totalTime = 0;
-            if (h.steps?.length) {
-                h.steps.forEach((_, i) => {
-                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
-                    totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0);
-                });
-            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
-            return { totalVal, totalTime };
-        };
-
+        // --- Logic Handlers ---
         window.setCat = id => { activeCat = id; render(); };
-        window.confirmDeleteHabit = (id) => {
-            const L = I18N[config.lang];
-            openModal(L.deleteQ, `<p class="text-slate-400 font-bold text-sm">Once deleted, data cannot be recovered.</p>`, () => {
-                habits = habits.filter(h => h.id !== id);
-                sync(); render();
-            });
-        };
-        window.toggleSubDone = (hId, sIdx) => {
-            const h = habits.find(x => x.id === hId);
-            const today = getTodayKey();
-            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
-            const hist = h.history[today];
-            if(!hist.subDone) hist.subDone = [];
-            if(hist.subDone.includes(sIdx)) hist.subDone = hist.subDone.filter(i => i !== sIdx);
-            else hist.subDone.push(sIdx);
-            sync(); render();
-        };
         window.toggleHabit = id => {
             const h = habits.find(x => x.id === id);
             const today = getTodayKey();
@@ -432,65 +321,84 @@
             }
             sync(); render();
         };
-        window.promptSubtask = id => {
-            openModal("New Step", `<input id="sub-input" autofocus placeholder="Task description..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none">`, () => {
-                const val = document.getElementById('sub-input').value;
-                if(val) {
-                    const h = habits.find(x => x.id === id);
-                    if(!h.steps) h.steps = [];
-                    h.steps.push(val);
-                    if(h.history?.[getTodayKey()]) h.history[getTodayKey()].done = false;
-                    sync(); render();
-                }
-            });
+
+        window.toggleSubDone = (hId, sIdx) => {
+            const h = habits.find(x => x.id === hId);
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
+            const hist = h.history[today];
+            if(!hist.subDone) hist.subDone = [];
+            if(hist.subDone.includes(sIdx)) hist.subDone = hist.subDone.filter(i => i !== sIdx);
+            else hist.subDone.push(sIdx);
+            sync(); render();
         };
+
         window.toggleSubTimer = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
-            if(!h.history[getTodayKey()]) h.history[getTodayKey()] = { subData: {} };
-            const hist = h.history[getTodayKey()];
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { subData: {} };
+            const hist = h.history[today];
             if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
             const sub = hist.subData[sIdx];
             if(sub.running) { sub.running = false; clearInterval(timerInterval); timerInterval = null; }
             else {
-                habits.forEach(h => { if(h.history?.[getTodayKey()]?.subData) Object.values(h.history[getTodayKey()].subData).forEach(s => s.running = false); });
+                habits.forEach(ha => { if(ha.history?.[today]?.subData) Object.values(ha.history[today].subData).forEach(s => s.running = false); });
                 sub.running = true;
                 if(timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => { sub.timer++; render(); }, 1000);
             }
             render();
         };
+
         window.updateSubVal = (hId, sIdx, val) => {
             const h = habits.find(x => x.id === hId);
-            if(!h.history[getTodayKey()]) h.history[getTodayKey()] = { subData: {} };
-            const hist = h.history[getTodayKey()];
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { subData: {} };
+            const hist = h.history[today];
             if(!hist.subData[sIdx]) hist.subData[sIdx] = { val: 0 };
             hist.subData[sIdx].val = Number(val); sync();
         };
-        window.removeStep = (hId, sIdx) => {
-            const h = habits.find(x => x.id === hId);
-            h.steps.splice(sIdx, 1);
-            const hist = h.history?.[getTodayKey()];
-            if(hist?.subDone) hist.subDone = hist.subDone.filter(i => i !== sIdx).map(i => i > sIdx ? i - 1 : i);
-            sync(); render();
+
+        window.addHabit = () => {
+            const L = I18N[config.lang];
+            let selectedEmoji = EMOJI_LIST[0];
+            const html = `<div class="space-y-4"><input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select><div class="grid grid-cols-2 gap-3"><select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs"><option value="check">Check</option><option value="timer">Timer</option><option value="input">Value</option></select><input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs outline-none"></div></div>`;
+            window.currentEmoji = selectedEmoji;
+            window.selectEmoji = (btn, e) => { document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); window.currentEmoji = e; };
+            openModal(L.add, html, () => {
+                const name = document.getElementById('h-name').value;
+                if(name) { habits.push({ id: Date.now(), name, emoji: window.currentEmoji, cat: document.getElementById('h-cat').value, type: document.getElementById('h-type').value, unit: document.getElementById('h-unit').value, steps: [], history: {} }); sync(); render(); }
+            });
         };
 
         function openModal(title, html, onOk) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-content').innerHTML = html;
             document.getElementById('modal-delete-sec').classList.add('hidden');
-            modal.classList.remove('hidden');
-            document.getElementById('modal-ok').onclick = () => { onOk(); modal.classList.add('hidden'); };
-            document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal-ok').onclick = () => { onOk(); document.getElementById('modal').classList.add('hidden'); };
+            document.getElementById('modal-cancel').onclick = () => document.getElementById('modal').classList.add('hidden');
         }
+
+        function getHabitStats(h) {
+            const hist = h.history?.[getTodayKey()] || { subData: {} };
+            let totalVal = 0, totalTime = 0;
+            if (h.steps?.length) {
+                h.steps.forEach((_, i) => { const d = hist.subData?.[i] || { val: 0, timer: 0 }; totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0); });
+            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
+            return { totalVal, totalTime };
+        }
+
         function formatTime(s) { const m = Math.floor(s/60); const sec = s % 60; return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
         function initSortable() { document.querySelectorAll('.sub-tasks').forEach(el => { new Sortable(el, { handle: '.drag-handle', animation: 200, onEnd: (e) => { const hId = parseInt(el.dataset.id); const h = habits.find(x => x.id === hId); const [moved] = h.steps.splice(e.oldIndex, 1); h.steps.splice(e.newIndex, 0, moved); sync(); }}); }); }
 
+        // Start App
+        initApp();
+
+        // Event Listeners
         document.getElementById('add-habit-btn').onclick = () => window.addHabit();
         document.getElementById('btn-sound').onclick = () => { config.sound = !config.sound; applyConfig(); sync(); };
         document.getElementById('select-lang').onchange = (e) => { config.lang = e.target.value; applyConfig(); render(); sync(); };
-        window.exportData = () => { const b = new Blob([JSON.stringify({ habits, config, categories })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `focus_pro_data.json`; a.click(); };
-        window.importData = () => document.getElementById('import-file').click();
-        document.getElementById('import-file').onchange = (e) => { const r = new FileReader(); r.onload = (re) => { try { const d = JSON.parse(re.target.result); habits = d.habits||[]; config = d.config||config; categories = d.categories||categories; sync(); render(); } catch(err) { alert("Invalid File"); }}; r.readAsText(e.target.files[0]); };
         document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => {
             document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
             document.getElementById(btn.dataset.target).classList.add('page-active');
@@ -498,17 +406,6 @@
             btn.classList.add('tab-active', 'text-indigo-600');
         };});
 
-        function getHabitStats(h) {
-            const hist = h.history?.[getTodayKey()] || { done: false, subData: {} };
-            let totalVal = 0, totalTime = 0;
-            if (h.steps?.length) {
-                h.steps.forEach((_, i) => {
-                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
-                    totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0);
-                });
-            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
-            return { totalVal, totalTime };
-        }
     </script>
 </body>
 </html>
