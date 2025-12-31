@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Progress Obsession</title>
+    <title>Progress Obsession - Local</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -25,14 +25,13 @@
 </head>
 <body class="min-h-screen pb-32">
 
-    <!-- Loading Overlay -->
+    <!-- 加载遮罩层 -->
     <div id="loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
         <div class="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-        <p class="text-xs font-bold text-slate-400 animate-pulse">Initializing Environment...</p>
     </div>
 
     <div id="app" class="max-w-md mx-auto px-6 pt-10">
-        <!-- Main Page -->
+        <!-- 主页面 -->
         <section id="page-checkin" class="page-content page-active">
             <header class="flex justify-between items-center mb-6">
                 <div>
@@ -47,39 +46,39 @@
             <div id="habits-container" class="space-y-6"></div>
         </section>
 
-        <!-- Insights Page -->
+        <!-- 统计页面 -->
         <section id="page-insight" class="page-content py-10 text-center">
             <h2 class="text-xl font-black mb-8 italic text-left">Analytics.</h2>
-            <div class="glass p-10 rounded-[2.5rem] text-slate-400 font-bold text-sm">Data visualization coming soon...</div>
+            <div class="glass p-10 rounded-[2.5rem] text-slate-400 font-bold text-sm">本地数据统计即将上线...</div>
         </section>
 
-        <!-- Config Page -->
+        <!-- 配置页面 -->
         <section id="page-config" class="page-content py-10">
             <h2 class="text-xl font-black mb-8 italic" id="ui-config-title">Config.</h2>
             <div class="space-y-4">
                 <div class="glass p-6 rounded-[2rem] flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-sound">Sound Effects</span>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-sound">音效开关</span>
                     <button id="btn-sound" class="w-12 h-6 bg-slate-200 rounded-full relative transition-colors">
                         <div id="sound-knob" class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform"></div>
                     </button>
                 </div>
                 <div class="glass p-6 rounded-[2rem] flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-lang">Language</span>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-lang">语言设置</span>
                     <select id="select-lang" class="bg-transparent text-xs font-black outline-none border-none text-right appearance-none">
                         <option value="zh">中文</option>
                         <option value="en">English</option>
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mt-6">
-                    <button onclick="window.exportData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-slate-400 tracking-widest">Export JSON</button>
-                    <button onclick="window.importData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-indigo-600 tracking-widest">Import JSON</button>
+                    <button onclick="window.exportData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-slate-400 tracking-widest">导出 JSON</button>
+                    <button onclick="window.importData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-indigo-600 tracking-widest">导入 JSON</button>
                 </div>
                 <input type="file" id="import-file" class="hidden" accept=".json">
             </div>
         </section>
     </div>
 
-    <!-- Navigation -->
+    <!-- 底部导航栏 -->
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[300px] glass rounded-full flex justify-around items-center py-3 px-2 z-50 shadow-xl border-white/50">
         <button data-target="page-checkin" class="tab-btn p-3 text-indigo-600 tab-active">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -92,38 +91,26 @@
         </button>
     </nav>
 
-    <!-- Modal System -->
+    <!-- 弹窗系统 -->
     <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto relative no-scrollbar">
-            <h3 class="text-xl font-black mb-6 italic" id="modal-title">Settings.</h3>
+            <h3 class="text-xl font-black mb-6 italic" id="modal-title">设置.</h3>
             <div id="modal-content" class="space-y-4"></div>
             <div class="flex gap-3 mt-8">
-                <button id="modal-cancel" class="flex-1 py-4 font-bold text-slate-300 text-[10px] uppercase tracking-widest text-center">Cancel</button>
-                <button id="modal-ok" class="flex-[2] bg-indigo-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">Confirm</button>
+                <button id="modal-cancel" class="flex-1 py-4 font-bold text-slate-300 text-[10px] uppercase tracking-widest text-center">取消</button>
+                <button id="modal-ok" class="flex-[2] bg-indigo-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">确定</button>
             </div>
             <button id="modal-delete-sec" class="hidden absolute top-8 right-8 text-red-400 p-2"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        /**
+         * Firebase 相关依赖已全部移除/注释
+         * 当前版本使用 localStorage 进行纯本地数据持久化
+         */
 
-        // Environment Variables (Safety Handling)
-        const getEnvConfig = () => {
-            try {
-                if (typeof __firebase_config !== 'undefined') return JSON.parse(__firebase_config);
-            } catch(e) {}
-            return null;
-        };
-
-        const configData = getEnvConfig();
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-v1';
-
-        let db = null;
-        let auth = null;
-        let user = null;
+        // --- 状态管理 ---
         let habits = [];
         let categories = [{ id: 'daily', name: 'Daily' }, { id: 'work', name: 'Work' }];
         let activeCat = 'ALL';
@@ -148,57 +135,39 @@
             }
         };
 
-        // Initialize Firebase ONLY if config is present
-        const initApp = async () => {
-            if (configData) {
+        // --- 数据持久化 (仅本地) ---
+        function loadData() {
+            // 尝试从本地存储读取数据
+            const stored = localStorage.getItem('progress_obs_data');
+            if (stored) {
                 try {
-                    const firebaseApp = initializeApp(configData);
-                    auth = getAuth(firebaseApp);
-                    db = getFirestore(firebaseApp);
-
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-
-                    onAuthStateChanged(auth, u => {
-                        user = u;
-                        if (user) {
-                            onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), snap => {
-                                if (snap.exists()) {
-                                    const d = snap.data();
-                                    habits = d.habits || [];
-                                    categories = d.categories || categories;
-                                    config = { ...config, ...(d.config || {}) };
-                                }
-                                finishLoading();
-                            }, (err) => {
-                                console.error("Firestore error:", err);
-                                finishLoading();
-                            });
-                        }
-                    });
-                } catch (e) {
-                    console.error("Firebase Init Error:", e);
-                    finishLoading();
-                }
-            } else {
-                // No Firebase config? Local Demo Mode
-                console.warn("No Firebase config found. Running in Local Mode.");
-                const localData = localStorage.getItem('focus_backup');
-                if (localData) {
-                    const d = JSON.parse(localData);
+                    const d = JSON.parse(stored);
                     habits = d.habits || [];
-                    config = d.config || config;
+                    categories = d.categories || categories;
+                    config = { ...config, ...(d.config || {}) };
+                } catch (e) {
+                    console.error("解析本地存储失败", e);
                 }
-                finishLoading();
             }
-        };
+            finishLoading();
+        }
+
+        function sync() {
+            // 同步数据到本地存储
+            const data = { habits, categories, config };
+            localStorage.setItem('progress_obs_data', JSON.stringify(data));
+
+            /* Firebase 同步代码 (已注释)
+            if (user && db) {
+                setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), data);
+            }
+            */
+        }
 
         function finishLoading() {
             applyConfig();
             render();
+            // 隐藏加载动画
             const loader = document.getElementById('loading');
             if (loader) {
                 loader.style.opacity = '0';
@@ -206,17 +175,7 @@
             }
         }
 
-        async function sync() {
-            if (user && db) {
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), { habits, categories, config });
-                } catch (e) { console.error("Sync Error:", e); }
-            }
-            localStorage.setItem('focus_backup', JSON.stringify({ habits, config }));
-        }
-
-        // --- UI Functions ---
-
+        // --- UI 渲染逻辑 ---
         function applyConfig() {
             const L = I18N[config.lang];
             document.getElementById('ui-title').innerText = L.title;
@@ -246,7 +205,7 @@
                 `<button onclick="window.addCategory()" class="w-9 h-9 rounded-full bg-white text-indigo-400 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-sm">+</button>`;
 
             const filtered = activeCat === 'ALL' ? habits : habits.filter(h => h.cat === activeCat);
-            document.getElementById('habits-container').innerHTML = filtered.length ? filtered.map(h => renderHabitCard(h)).join('') : `<div class="py-20 text-center opacity-20 font-bold text-sm">Empty here.</div>`;
+            document.getElementById('habits-container').innerHTML = filtered.length ? filtered.map(h => renderHabitCard(h)).join('') : `<div class="py-20 text-center opacity-20 font-bold text-sm">还没有习惯，点击右上角开始。</div>`;
             initSortable();
         }
 
@@ -274,7 +233,7 @@
                         </div>
                         <button onclick="window.editHabitDetails(${h.id})" class="p-2 text-slate-300"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                     </div>
-                    ${h.type !== 'check' ? `<div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4"><div class="flex-1"><p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Today</p><p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + (h.unit||'min')}</p></div></div>` : ''}
+                    ${h.type !== 'check' ? `<div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4"><div class="flex-1"><p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">今日进度</p><p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + (h.unit||'min')}</p></div></div>` : ''}
                     <div class="space-y-3 mb-6 sub-tasks" data-id="${h.id}">
                         ${(h.steps || []).map((step, idx) => {
                             const subHist = hist.subData?.[idx] || { val: 0, timer: 0 };
@@ -295,7 +254,7 @@
                     <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
                         <button onclick="window.confirmDeleteHabit(${h.id})" class="p-2 text-slate-200 hover:text-red-400 active:scale-90 transition-transform"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                         <div class="flex items-center gap-4">
-                            <button onclick="window.promptSubtask(${h.id})" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-[9px] font-black uppercase text-slate-500 active:bg-indigo-50">Add Step</button>
+                            <button onclick="window.promptSubtask(${h.id})" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-[9px] font-black uppercase text-slate-500 active:bg-indigo-50">添加步骤</button>
                             <button onclick="window.toggleHabit(${h.id})" class="h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${hist.done?'bg-green-500 text-white shadow-xl shadow-green-100 scale-110': (isReady ? 'ready-to-check bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-300')}">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                             </button>
@@ -305,15 +264,20 @@
             `;
         }
 
-        // --- Logic Handlers ---
+        // --- 事件处理函数 ---
         window.setCat = id => { activeCat = id; render(); };
+
         window.toggleHabit = id => {
             const h = habits.find(x => x.id === id);
             const today = getTodayKey();
+            if(!h.history) h.history = {};
             if(!h.history[today]) h.history[today] = { done: false, subDone: [] };
             const hist = h.history[today];
+
+            // 如果有子任务但未全部完成，且习惯未标记完成，则拦截
             const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => hist.subDone?.includes(i));
             if(h.steps?.length > 0 && !allSubDone && !hist.done) return;
+
             hist.done = !hist.done;
             if(hist.done) {
                 if(config.sound) { try { new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3').play(); } catch(e){} }
@@ -325,6 +289,7 @@
         window.toggleSubDone = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
+            if(!h.history) h.history = {};
             if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
             const hist = h.history[today];
             if(!hist.subDone) hist.subDone = [];
@@ -336,16 +301,29 @@
         window.toggleSubTimer = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
+            if(!h.history) h.history = {};
             if(!h.history[today]) h.history[today] = { subData: {} };
             const hist = h.history[today];
             if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
             const sub = hist.subData[sIdx];
-            if(sub.running) { sub.running = false; clearInterval(timerInterval); timerInterval = null; }
-            else {
-                habits.forEach(ha => { if(ha.history?.[today]?.subData) Object.values(ha.history[today].subData).forEach(s => s.running = false); });
+
+            if(sub.running) {
+                sub.running = false;
+                clearInterval(timerInterval);
+                timerInterval = null;
+            } else {
+                // 关闭其他正在运行的计时器
+                habits.forEach(ha => {
+                    if(ha.history?.[today]?.subData)
+                        Object.values(ha.history[today].subData).forEach(s => s.running = false);
+                });
                 sub.running = true;
                 if(timerInterval) clearInterval(timerInterval);
-                timerInterval = setInterval(() => { sub.timer++; render(); }, 1000);
+                timerInterval = setInterval(() => {
+                    sub.timer++;
+                    render();
+                    // 这里不直接调用 sync 是为了性能，计时停止时才 sync
+                }, 1000);
             }
             render();
         };
@@ -353,24 +331,140 @@
         window.updateSubVal = (hId, sIdx, val) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
+            if(!h.history) h.history = {};
             if(!h.history[today]) h.history[today] = { subData: {} };
             const hist = h.history[today];
             if(!hist.subData[sIdx]) hist.subData[sIdx] = { val: 0 };
-            hist.subData[sIdx].val = Number(val); sync();
+            hist.subData[sIdx].val = Number(val);
+            sync();
         };
 
         window.addHabit = () => {
             const L = I18N[config.lang];
             let selectedEmoji = EMOJI_LIST[0];
-            const html = `<div class="space-y-4"><input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select><div class="grid grid-cols-2 gap-3"><select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs"><option value="check">Check</option><option value="timer">Timer</option><option value="input">Value</option></select><input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs outline-none"></div></div>`;
+            const html = `<div class="space-y-4"><input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select><div class="grid grid-cols-2 gap-3"><select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs"><option value="check">勾选</option><option value="timer">计时器</option><option value="input">数值</option></select><input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs outline-none"></div></div>`;
             window.currentEmoji = selectedEmoji;
-            window.selectEmoji = (btn, e) => { document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); window.currentEmoji = e; };
+            window.selectEmoji = (btn, e) => {
+                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                window.currentEmoji = e;
+            };
             openModal(L.add, html, () => {
                 const name = document.getElementById('h-name').value;
-                if(name) { habits.push({ id: Date.now(), name, emoji: window.currentEmoji, cat: document.getElementById('h-cat').value, type: document.getElementById('h-type').value, unit: document.getElementById('h-unit').value, steps: [], history: {} }); sync(); render(); }
+                if(name) {
+                    habits.push({
+                        id: Date.now(),
+                        name,
+                        emoji: window.currentEmoji,
+                        cat: document.getElementById('h-cat').value,
+                        type: document.getElementById('h-type').value,
+                        unit: document.getElementById('h-unit').value,
+                        steps: [],
+                        history: {}
+                    });
+                    sync();
+                    render();
+                }
             });
         };
 
+        window.editHabitDetails = (id) => {
+            const h = habits.find(x => x.id === id);
+            const L = I18N[config.lang];
+            let selectedEmoji = h.emoji || EMOJI_LIST[0];
+            const html = `<div class="space-y-4"><input id="h-name" value="${h.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select></div>`;
+            window.currentEmoji = selectedEmoji;
+            window.selectEmoji = (btn, e) => {
+                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                window.currentEmoji = e;
+            };
+            openModal("编辑习惯", html, () => {
+                h.name = document.getElementById('h-name').value;
+                h.emoji = window.currentEmoji;
+                h.cat = document.getElementById('h-cat').value;
+                sync(); render();
+            });
+        };
+
+        window.confirmDeleteHabit = (id) => {
+            openModal("确认删除？", `<p class="text-slate-400 font-bold text-sm">删除后数据无法找回。</p>`, () => {
+                habits = habits.filter(h => h.id !== id);
+                sync(); render();
+            });
+        };
+
+        window.addCategory = () => {
+            openModal("新建分类", `<input id="cat-name" placeholder="分类名称" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
+                const name = document.getElementById('cat-name').value;
+                if(name) { categories.push({ id: 'cat_' + Date.now(), name }); sync(); render(); }
+            });
+        };
+
+        window.editCategory = (catId) => {
+            if(catId === 'daily' || catId === 'work') return;
+            const c = categories.find(x => x.id === catId);
+            const delBtn = document.getElementById('modal-delete-sec');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => {
+                categories = categories.filter(x => x.id !== catId);
+                habits.forEach(h => { if(h.cat === catId) h.cat = 'daily'; });
+                document.getElementById('modal').classList.add('hidden');
+                sync(); render();
+            };
+            openModal("编辑分类", `<input id="cat-name" value="${c.name}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
+                c.name = document.getElementById('cat-name').value;
+                sync(); render();
+            });
+        };
+
+        window.promptSubtask = id => {
+            openModal("添加步骤", `<input id="sub-input" autofocus placeholder="步骤描述..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
+                const val = document.getElementById('sub-input').value;
+                if(val) {
+                    const h = habits.find(x => x.id === id);
+                    if(!h.steps) h.steps = [];
+                    h.steps.push(val);
+                    sync(); render();
+                }
+            });
+        };
+
+        window.removeStep = (hId, sIdx) => {
+            const h = habits.find(x => x.id === hId);
+            h.steps.splice(sIdx, 1);
+            sync(); render();
+        };
+
+        // --- 导入导出 ---
+        window.exportData = () => {
+            const b = new Blob([JSON.stringify({ habits, config, categories })], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(b);
+            a.download = `focus_data_${getTodayKey()}.json`;
+            a.click();
+        };
+
+        window.importData = () => document.getElementById('import-file').click();
+
+        document.getElementById('import-file').onchange = (e) => {
+            const r = new FileReader();
+            r.onload = (re) => {
+                try {
+                    const d = JSON.parse(re.target.result);
+                    habits = d.habits||[];
+                    config = d.config||config;
+                    categories = d.categories||categories;
+                    sync();
+                    render();
+                } catch(err) {
+                    alert("文件无效");
+                }
+            };
+            r.readAsText(e.target.files[0]);
+        };
+
+        // --- 工具函数 ---
         function openModal(title, html, onOk) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-content').innerHTML = html;
@@ -384,28 +478,70 @@
             const hist = h.history?.[getTodayKey()] || { subData: {} };
             let totalVal = 0, totalTime = 0;
             if (h.steps?.length) {
-                h.steps.forEach((_, i) => { const d = hist.subData?.[i] || { val: 0, timer: 0 }; totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0); });
-            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
+                h.steps.forEach((_, i) => {
+                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
+                    totalVal += Number(d.val || 0);
+                    totalTime += Number(d.timer || 0);
+                });
+            } else {
+                totalVal = Number(hist.val || 0);
+                totalTime = Number(hist.timer || 0);
+            }
             return { totalVal, totalTime };
         }
 
-        function formatTime(s) { const m = Math.floor(s/60); const sec = s % 60; return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
-        function initSortable() { document.querySelectorAll('.sub-tasks').forEach(el => { new Sortable(el, { handle: '.drag-handle', animation: 200, onEnd: (e) => { const hId = parseInt(el.dataset.id); const h = habits.find(x => x.id === hId); const [moved] = h.steps.splice(e.oldIndex, 1); h.steps.splice(e.newIndex, 0, moved); sync(); }}); }); }
+        function formatTime(s) {
+            const m = Math.floor(s/60);
+            const sec = s % 60;
+            return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+        }
 
-        // Start App
-        initApp();
+        function initSortable() {
+            document.querySelectorAll('.sub-tasks').forEach(el => {
+                new Sortable(el, {
+                    handle: '.drag-handle',
+                    animation: 200,
+                    onEnd: (e) => {
+                        const hId = parseInt(el.dataset.id);
+                        const h = habits.find(x => x.id === hId);
+                        const [moved] = h.steps.splice(e.oldIndex, 1);
+                        h.steps.splice(e.newIndex, 0, moved);
+                        sync();
+                    }
+                });
+            });
+        }
 
-        // Event Listeners
+        // --- 启动入口 ---
+        window.onload = loadData;
+
+        // --- 事件监听 ---
         document.getElementById('add-habit-btn').onclick = () => window.addHabit();
-        document.getElementById('btn-sound').onclick = () => { config.sound = !config.sound; applyConfig(); sync(); };
-        document.getElementById('select-lang').onchange = (e) => { config.lang = e.target.value; applyConfig(); render(); sync(); };
-        document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => {
-            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
-            document.getElementById(btn.dataset.target).classList.add('page-active');
-            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('tab-active', 'text-indigo-600'); b.classList.add('text-slate-300'); });
-            btn.classList.add('tab-active', 'text-indigo-600');
-        };});
 
+        document.getElementById('btn-sound').onclick = () => {
+            config.sound = !config.sound;
+            applyConfig();
+            sync();
+        };
+
+        document.getElementById('select-lang').onchange = (e) => {
+            config.lang = e.target.value;
+            applyConfig();
+            render();
+            sync();
+        };
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
+                document.getElementById(btn.dataset.target).classList.add('page-active');
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active', 'text-indigo-600');
+                    b.classList.add('text-slate-300');
+                });
+                btn.classList.add('tab-active', 'text-indigo-600');
+            };
+        });
     </script>
 </body>
 </html>
