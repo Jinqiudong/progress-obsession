@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Focus Pro - Professional Edition</title>
+    <title>Progress Obsession</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -107,7 +107,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-subtask-enhanced-v2';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-intl-v1';
 
         let user = null;
         let habits = [];
@@ -120,10 +120,21 @@
         let timerInterval = null;
         const getTodayKey = () => new Date().toISOString().split('T')[0];
 
-        const EMOJI_LIST = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '☺️', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '😎', '🤓', '🥳', '🤯', '😴', '✨', '🔥', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '💪', '✍️', '🙏', '🤝', '👍', '👎', '👊', '👏', '🙌', '🧠', '👀', '👁️', '🏃', '🧘', '💪', '🏀', '⚽️', '🏈', '⚾️', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🛹', '🚲', '🚵', '🧗', '🏊', '🚣', '🎨', '🎹', '🎸', '🎮', '🎲', '🍎', '🍏', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🥦', '🥑', '🥩', '🥚', '🥞', '🍵', '☕️', '🍺', '📚', '💻', '🎨', '🎹', '🌱', '🧹', '🍵', '💤', '✍️', '🚿', '🛀', '🧼', '🪥', '⏰', '🔋', '📱', '💡', '📅', '🗑️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐣', '🦄', '🐝', '🦋', '🌸', '🌵', '🌲', '🍀', '🌞', '🌙', '🌊'];
+        const EMOJI_LIST = ['😀', '🏃', '📚', '🧘', '💧', '🍎', '💪', '💻', '🎨', '🎹', '🌱', '🧹', '🍵', '💤', '✍️', '🏀', '✨', '🔥', '🧠', '👀', '⚽️', '🚲', '🎸', '🎮', '☕️', '⏰', '🔋', '📱', '💡', '📅', '🐶', '🌸', '🌊'];
+
         const I18N = {
-            zh: { title: '专注.', config: '配置.', sound: '音效开关', lang: '语言设置', add: '新建习惯', name: '习惯名称', type: '记录模式', unit: '单位', deleteQ: '确定删除吗？', cat: '所属分类', emoji: '选择图标' },
-            en: { title: 'Focus.', config: 'Config.', sound: 'Sound FX', lang: 'Language', add: 'New Habit', name: 'Habit Name', type: 'Mode', unit: 'Unit', deleteQ: 'Confirm Delete?', cat: 'Category', emoji: 'Select Icon' }
+            zh: {
+                title: '专注.', config: '配置.', sound: '音效开关', lang: '语言设置', add: '新建习惯',
+                name: '习惯名称', type: '记录模式', unit: '单位', deleteQ: '确定删除吗？',
+                cat: '所属分类', emoji: '选择图标', all: '全部',
+                cats: { daily: '日常', work: '工作' }
+            },
+            en: {
+                title: 'Focus.', config: 'Config.', sound: 'Sound FX', lang: 'Language', add: 'New Habit',
+                name: 'Habit Name', type: 'Mode', unit: 'Unit', deleteQ: 'Confirm Delete?',
+                cat: 'Category', emoji: 'Select Icon', all: 'All',
+                cats: { daily: 'Daily', work: 'Work' }
+            }
         };
 
         const initAuth = async () => {
@@ -164,20 +175,18 @@
             document.getElementById('ui-sound').innerText = L.sound;
             document.getElementById('ui-lang').innerText = L.lang;
             document.getElementById('select-lang').value = config.lang;
-            document.getElementById('btn-sound').classList.toggle('bg-indigo-600', config.sound);
+
+            // 开关开启时显示绿色，关闭时显示灰色
+            document.getElementById('btn-sound').className = `w-12 h-6 rounded-full relative transition-colors ${config.sound ? 'bg-green-500' : 'bg-slate-200'}`;
             document.getElementById('sound-knob').style.transform = config.sound ? 'translateX(24px)' : 'translateX(0px)';
         }
 
-        function getHabitStats(h) {
-            const hist = h.history?.[getTodayKey()] || { done: false, subData: {} };
-            let totalVal = 0, totalTime = 0;
-            if (h.steps?.length) {
-                h.steps.forEach((_, i) => {
-                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
-                    totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0);
-                });
-            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
-            return { totalVal, totalTime };
+        function getCategoryDisplayName(cat) {
+            const L = I18N[config.lang];
+            if (cat.id === 'daily' || cat.id === 'work') {
+                return L.cats[cat.id];
+            }
+            return cat.name;
         }
 
         function render() {
@@ -185,8 +194,8 @@
             document.getElementById('current-date').innerText = new Date().toLocaleDateString(config.lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
             const catBar = document.getElementById('category-bar');
-            catBar.innerHTML = `<button onclick="window.setCat('ALL')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 ${activeCat==='ALL'?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">All</button>` +
-                categories.map(c => `<button oncontextmenu="event.preventDefault(); window.editCategory('${c.id}')" onclick="window.setCat('${c.id}')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 whitespace-nowrap ${activeCat===c.id?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${c.name}</button>`).join('') +
+            catBar.innerHTML = `<button onclick="window.setCat('ALL')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 ${activeCat==='ALL'?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${L.all}</button>` +
+                categories.map(c => `<button oncontextmenu="event.preventDefault(); window.editCategory('${c.id}')" onclick="window.setCat('${c.id}')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 whitespace-nowrap ${activeCat===c.id?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${getCategoryDisplayName(c)}</button>`).join('') +
                 `<button onclick="window.addCategory()" class="w-9 h-9 rounded-full bg-white text-indigo-400 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-sm">+</button>`;
 
             const filtered = activeCat === 'ALL' ? habits : habits.filter(h => h.cat === activeCat);
@@ -201,6 +210,7 @@
             const icon = h.emoji || '✨';
             const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => hist.subDone?.includes(i));
             const isReady = h.steps?.length > 0 ? (allSubDone && !hist.done) : !hist.done;
+            const categoryObj = categories.find(c => c.id === h.cat) || { id: h.cat, name: h.cat };
 
             return `
                 <div class="glass p-6 rounded-[2.5rem] relative shadow-sm border-white overflow-hidden mb-6">
@@ -209,7 +219,10 @@
                             <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-50">${icon}</div>
                             <div>
                                 <h4 class="font-extrabold text-slate-800 text-lg leading-tight ${hist.done?'task-done':''}">${h.name}</h4>
-                                <div class="flex items-center gap-2 mt-1"><span class="mode-badge ${h.type==='timer'?'bg-orange-50 text-orange-500':h.type==='input'?'bg-blue-50 text-blue-500':'bg-indigo-50 text-indigo-500'}">${h.type}</span></div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${getCategoryDisplayName(categoryObj)}</span>
+                                    <span class="mode-badge ${h.type==='timer'?'bg-orange-50 text-orange-500':h.type==='input'?'bg-blue-50 text-blue-500':'bg-indigo-50 text-indigo-500'}">${h.type}</span>
+                                </div>
                             </div>
                         </div>
                         <button onclick="window.editHabitDetails(${h.id})" class="p-2 text-slate-300"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
@@ -257,21 +270,18 @@
             const html = `
                 <div class="space-y-4">
                     <input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold border-none outline-none focus:ring-2 ring-indigo-100 transition-all">
-
                     <div class="p-1">
                         <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p>
                         <div class="grid grid-cols-8 gap-2">
                             ${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}
                         </div>
                     </div>
-
                     <div class="space-y-2">
                         <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.cat}</p>
                         <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs appearance-none border-none outline-none">
-                            ${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${c.name}</option>`).join('')}
+                            ${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}
                         </select>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-2">
                             <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.type}</p>
@@ -330,7 +340,7 @@
                         </div>
                     </div>
                     <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
-                        ${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${c.name}</option>`).join('')}
+                        ${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}
                     </select>
                 </div>
             `;
@@ -361,6 +371,7 @@
         };
 
         window.editCategory = (catId) => {
+            if(catId === 'daily' || catId === 'work') return; // 锁定系统分类
             const c = categories.find(x => x.id === catId);
             if(!c) return;
             const delBtn = document.getElementById('modal-delete-sec');
@@ -378,7 +389,18 @@
             });
         };
 
-        // --- Existing Mechanics ---
+        window.getHabitStats = (h) => {
+            const hist = h.history?.[getTodayKey()] || { done: false, subData: {} };
+            let totalVal = 0, totalTime = 0;
+            if (h.steps?.length) {
+                h.steps.forEach((_, i) => {
+                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
+                    totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0);
+                });
+            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
+            return { totalVal, totalTime };
+        };
+
         window.setCat = id => { activeCat = id; render(); };
         window.confirmDeleteHabit = (id) => {
             const L = I18N[config.lang];
@@ -392,6 +414,7 @@
             const today = getTodayKey();
             if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
             const hist = h.history[today];
+            if(!hist.subDone) hist.subDone = [];
             if(hist.subDone.includes(sIdx)) hist.subDone = hist.subDone.filter(i => i !== sIdx);
             else hist.subDone.push(sIdx);
             sync(); render();
@@ -424,7 +447,8 @@
         };
         window.toggleSubTimer = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
-            const hist = h.history[getTodayKey()] || { subData: {} };
+            if(!h.history[getTodayKey()]) h.history[getTodayKey()] = { subData: {} };
+            const hist = h.history[getTodayKey()];
             if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
             const sub = hist.subData[sIdx];
             if(sub.running) { sub.running = false; clearInterval(timerInterval); timerInterval = null; }
@@ -474,6 +498,18 @@
             document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('tab-active', 'text-indigo-600'); b.classList.add('text-slate-300'); });
             btn.classList.add('tab-active', 'text-indigo-600');
         };});
+
+        function getHabitStats(h) {
+            const hist = h.history?.[getTodayKey()] || { done: false, subData: {} };
+            let totalVal = 0, totalTime = 0;
+            if (h.steps?.length) {
+                h.steps.forEach((_, i) => {
+                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
+                    totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0);
+                });
+            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
+            return { totalVal, totalTime };
+        }
     </script>
 </body>
 </html>
