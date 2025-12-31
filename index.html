@@ -3,565 +3,427 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Progress Obsession</title>
+    <title>Focus Pro - Subtask Mastery</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-
-        :root {
-            --primary: #6366f1;
-            --bg-soft: #fbfcfe;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-soft);
-            color: #1e293b;
-            -webkit-tap-highlight-color: transparent;
-            padding-top: env(safe-area-inset-top);
-        }
-
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
-
-        .tab-active { color: var(--primary); font-weight: 800; position: relative; }
-        .tab-active::after { content: ''; position: absolute; bottom: -4px; left: 20%; width: 60%; height: 3px; background: var(--primary); border-radius: 10px; }
-
-        .btn-check-active {
-            background: var(--primary);
-            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .btn-press:active { transform: scale(0.92); }
-
-        .day-box { width: 12px; height: 12px; border-radius: 3px; background: #e2e8f0; transition: all 0.3s; }
-        .day-box.completed { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
-
-        .task-done { text-decoration: line-through; opacity: 0.3; }
-        #progress-bar { transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        @keyframes shake {
-            0% { transform: rotate(0deg); }
-            25% { transform: rotate(1deg); }
-            75% { transform: rotate(-1deg); }
-            100% { transform: rotate(0deg); }
-        }
-        .editing-shake {
-            animation: shake 0.3s infinite;
-            border: 1px dashed var(--primary);
-            border-radius: 8px;
-            padding: 2px 6px;
-        }
-
-        /* 加载动画 */
-        #loading-overlay {
-            position: fixed; inset: 0; background: white; z-index: 100;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.5s;
-        }
+        .page-content { display: none; }
+        .page-active { display: block; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-active { color: #6366f1; transform: scale(1.1); }
+        .task-done { text-decoration: line-through; opacity: 0.4; }
+        .mode-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
+        input[type="checkbox"]:checked { background-color: #6366f1; border-color: #6366f1; }
+        .subtask-row { transition: all 0.2s ease; }
+        .subtask-row:active { background: #f1f5f9; }
     </style>
 </head>
-<body class="min-h-screen pb-28">
-    <!-- Loading Screen -->
-    <div id="loading-overlay">
-        <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing with Cloud...</p>
+<body class="min-h-screen pb-32">
+
+    <!-- Loading Mask -->
+    <div id="loading" class="fixed inset-0 bg-white z-[100] flex items-center justify-center">
+        <div class="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
     </div>
 
-    <div id="app" class="max-w-lg mx-auto px-5 pt-8">
-        <!-- Header -->
-        <header class="flex justify-between items-start mb-8">
-            <div>
-                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight italic">Progress Obsession<span class="text-indigo-600">.</span></h1>
-                <div class="flex items-center gap-3 mt-1">
-                    <p id="today-date" class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]"></p>
-                    <button id="lang-toggle" class="text-[9px] font-black text-indigo-400 border border-indigo-100 px-1.5 py-0.5 rounded-md hover:bg-indigo-50 transition-colors uppercase">EN/CN</button>
-                </div>
-            </div>
-            <div class="flex gap-3">
-                <button id="btn-settings" class="glass text-slate-500 p-3 rounded-2xl btn-press shadow-sm">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                </button>
-                <button id="main-add-btn" class="bg-indigo-600 text-white p-3 rounded-2xl shadow-xl shadow-indigo-200 btn-press">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                </button>
-            </div>
-        </header>
+    <div id="app" class="max-w-md mx-auto px-6 pt-10">
 
-        <!-- Stats Board -->
-        <div class="glass rounded-[2.5rem] p-6 mb-8 shadow-sm border border-white/60">
-            <div class="flex justify-between items-center mb-6">
+        <!-- Check-in Page -->
+        <section id="page-checkin" class="page-content page-active">
+            <header class="flex justify-between items-center mb-6">
                 <div>
-                    <p id="label-streak" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1"></p>
-                    <div class="flex items-baseline gap-1">
-                        <span id="stat-streak" class="text-4xl font-black text-slate-800">0</span>
-                        <span id="unit-days" class="text-slate-400 text-xs font-bold uppercase"></span>
-                    </div>
+                    <h1 class="text-3xl font-black tracking-tighter italic text-slate-800">Focus.</h1>
+                    <p id="current-date" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1"></p>
                 </div>
-                <div class="text-right">
-                    <p id="label-heatmap" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2"></p>
-                    <div id="week-view" class="flex gap-1.5 justify-end"></div>
-                </div>
-            </div>
-            <div class="bg-indigo-50/50 rounded-2xl p-4 flex justify-between items-center">
-                <div class="flex flex-col">
-                    <span id="label-today-progress" class="text-indigo-600 text-[10px] font-black uppercase tracking-tighter"></span>
-                    <span class="text-slate-800 text-xs font-bold"><span id="stat-total">0</span> / <span id="stat-goal">0</span> <span id="unit-achieved"></span></span>
-                </div>
-                <div class="h-2 w-32 bg-indigo-100 rounded-full overflow-hidden">
-                    <div id="progress-bar" class="h-full bg-indigo-600" style="width: 0%"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Categories -->
-        <div class="flex items-center gap-2 mb-6 border-b border-slate-100">
-            <nav id="category-tabs" class="flex gap-6 overflow-x-auto pb-3 flex-1 no-scrollbar"></nav>
-            <div class="flex items-center gap-1 pb-3">
-                <button id="edit-mode-toggle" class="p-1 text-slate-300 hover:text-indigo-500 transition-colors">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <button id="add-habit-btn" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
                 </button>
-                <button id="add-cat-trigger" class="px-1 text-slate-300 hover:text-indigo-600 font-bold text-xl btn-press">+</button>
-            </div>
-        </div>
+            </header>
 
-        <!-- Habits List -->
-        <div id="habits-container" class="space-y-5"></div>
+            <div class="flex gap-3 mb-6 overflow-x-auto no-scrollbar items-center py-2" id="category-bar"></div>
+            <div id="habits-container" class="space-y-6"></div>
+        </section>
+
+        <!-- Insights Page (Simplified) -->
+        <section id="page-insight" class="page-content text-center py-20">
+            <p class="text-slate-400 font-bold">Insight data visualization here...</p>
+        </section>
     </div>
+
+    <!-- Navigation -->
+    <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[300px] glass rounded-full flex justify-around items-center py-3 px-2 z-50 shadow-xl border-white/50">
+        <button data-target="page-checkin" class="tab-btn p-3 text-indigo-600 tab-active">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </button>
+        <button data-target="page-insight" class="tab-btn p-3 text-slate-300">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </button>
+    </nav>
 
     <!-- Modal System -->
-    <div id="ui-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-6">
-        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl transition-all scale-95 opacity-0" id="modal-content">
-            <h3 id="modal-title" class="text-xl font-extrabold mb-6 text-slate-800 tracking-tight"></h3>
-
-            <div id="modal-body" class="space-y-4">
-                <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium">
-
-                <div id="modal-habit-extras" class="hidden space-y-4">
-                    <div class="flex gap-4">
-                        <div class="flex-1">
-                            <label id="label-cat-select" class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block"></label>
-                            <select id="modal-select" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium"></select>
-                        </div>
-                        <div class="flex-1">
-                            <label id="label-freq-select" class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block"></label>
-                            <select id="modal-freq" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium"></select>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="settings-extras" class="hidden space-y-6 pt-2">
-                    <div>
-                        <p id="label-sound-style" class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3"></p>
-                        <div class="grid grid-cols-2 gap-2" id="sound-options">
-                            <button data-sound="crystal" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">💎 Crystal</button>
-                            <button data-sound="wooden" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🪵 Wood</button>
-                            <button data-sound="bubble" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🫧 Bubble</button>
-                            <button data-sound="none" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🔕 Mute</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="modal-footer" class="flex gap-4 mt-8">
-                <button id="modal-cancel" class="flex-1 py-4 text-slate-400 font-bold text-xs uppercase tracking-widest"></button>
-                <div id="modal-extra-actions" class="hidden">
-                    <button id="modal-delete" class="px-4 py-4 text-red-500 font-bold text-xs uppercase tracking-widest">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
-                </div>
-                <button id="modal-confirm" class="flex-1 bg-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100 uppercase tracking-widest"></button>
+    <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-black mb-6 italic" id="modal-title">Settings.</h3>
+            <div id="modal-content" class="space-y-4"></div>
+            <div class="flex gap-3 mt-8">
+                <button id="modal-cancel" class="flex-1 py-4 font-bold text-slate-300 text-[10px] uppercase tracking-widest text-center">Cancel</button>
+                <button id="modal-ok" class="flex-[2] bg-indigo-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">Confirm</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase Config ---
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'progress-obsession-v1';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-subtask';
 
-        // --- i18n Dictionary ---
-        const i18n = {
-            zh: {
-                streak: "连胜纪录", days: "天", heatmap: "秩序热力图", todayProgress: "今日进度", achieved: "项达成",
-                allSystems: "全部", cancel: "取消", confirm: "确定",
-                editMode: "编辑分类", addCat: "新分类", addHabit: "构建新秩序", editHabit: "编辑卡片",
-                catLabel: "分类 Category", freqLabel: "频率 Frequency", soundLabel: "音效风格", dataLabel: "数据管理",
-                addSub: "+ 拆解子任务", inputPlaceholder: "在此输入...",
-                freqOptions: { daily: "每日", workday: "工作日", weekend: "周末" },
-                settings: "系统设置", deleteTitle: "删除此项？",
-                builtInCats: { "daily": "日常", "personal": "个人" }
-            },
-            en: {
-                streak: "Streak Count", days: "Days", heatmap: "Order Heatmap", todayProgress: "Today's Progress", achieved: "Goals Done",
-                allSystems: "All", cancel: "Cancel", confirm: "Confirm",
-                editMode: "Edit Category", addCat: "New Category", addHabit: "New Habit", editHabit: "Edit Habit",
-                catLabel: "Category", freqLabel: "Frequency", soundLabel: "Sound Style", dataLabel: "Data Management",
-                addSub: "+ Add Subtask", inputPlaceholder: "Type here...",
-                freqOptions: { daily: "Daily", workday: "Workdays", weekend: "Weekends" },
-                settings: "Settings", deleteTitle: "Delete item?",
-                builtInCats: { "daily": "Daily", "personal": "Personal" }
-            }
-        };
-
-        // --- App State ---
         let user = null;
         let habits = [];
         let categories = [
-            { id: 'daily', name: '日常' },
-            { id: 'personal', name: '个人' }
+            { id: 'daily', icon: '✨', name: 'Daily' },
+            { id: 'work', icon: '💼', name: 'Work' }
         ];
-        let currentLang = localStorage.getItem('app_lang') || 'zh';
-        let currentSound = localStorage.getItem('app_sound_v2') || 'crystal';
-        let currentCat = 'ALL';
-        let isEditMode = false;
-        const todayStr = new Date().toISOString().split('T')[0];
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let modalCallback = null;
-        let modalDeleteCallback = null;
+        let activeCat = 'ALL';
+        let timerInterval = null;
+        const getTodayKey = () => new Date().toISOString().split('T')[0];
 
-        // --- Firebase Auth & Sync ---
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth Error", err);
-            }
-        };
-
-        onAuthStateChanged(auth, (u) => {
+        onAuthStateChanged(auth, u => {
             user = u;
             if (user) {
-                // 开始监听 Firestore 数据
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'state');
-                onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        habits = data.habits || [];
-                        categories = data.categories || categories;
-                    } else {
-                        // 首次运行，初始化云端数据
-                        syncToCloud();
+                onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), snap => {
+                    if (snap.exists()) {
+                        const d = snap.data();
+                        habits = d.habits || [];
+                        categories = d.categories || categories;
                     }
-                    hideLoading();
-                    refreshUI();
-                }, (error) => {
-                    console.error("Snapshot error:", error);
-                    hideLoading();
+                    render();
+                    document.getElementById('loading').style.display = 'none';
                 });
+            } else {
+                signInAnonymously(auth);
             }
         });
 
-        async function syncToCloud() {
+        async function sync() {
             if (!user) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'state');
-            await setDoc(docRef, {
-                habits: habits,
-                categories: categories,
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), { habits, categories });
+            } catch (e) { console.error("Sync Error:", e); }
         }
 
-        function hideLoading() {
-            const loader = document.getElementById('loading-overlay');
-            if(loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 500);
+        // Logic for aggregation
+        function getHabitStats(h) {
+            const todayStr = getTodayKey();
+            const hist = h.history?.[todayStr] || { done: false, subData: {} };
+            let totalVal = 0;
+            let totalTime = 0;
+
+            if (h.steps && h.steps.length > 0) {
+                h.steps.forEach((_, idx) => {
+                    const data = hist.subData?.[idx] || { val: 0, timer: 0 };
+                    totalVal += Number(data.val || 0);
+                    totalTime += Number(data.timer || 0);
+                });
+            } else {
+                totalVal = Number(hist.val || 0);
+                totalTime = Number(hist.timer || 0);
             }
+            return { totalVal, totalTime, isDone: hist.done };
         }
 
-        // --- Core Logic ---
-        function refreshUI() {
-            updateStaticText();
-            renderTabs();
-            renderHabits();
-            updateStats();
-        }
+        function render() {
+            const today = new Date();
+            document.getElementById('current-date').innerText = today.toLocaleDateString('zh-CN', { weekday: 'long', month: 'short', day: 'numeric' });
 
-        function getCatName(catId) {
-            const cat = categories.find(c => c.id === catId);
-            const t = i18n[currentLang].builtInCats;
-            return t[catId] || (cat ? cat.name : 'Unknown');
-        }
+            const catBar = document.getElementById('category-bar');
+            catBar.innerHTML = `<button onclick="window.setCat('ALL')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 ${activeCat==='ALL'?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">All</button>` +
+                categories.map(c => `<button onclick="window.setCat('${c.id}')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 whitespace-nowrap ${activeCat===c.id?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${c.icon} ${c.name}</button>`).join('') +
+                `<button onclick="window.addCategory()" class="w-9 h-9 rounded-full bg-white text-indigo-400 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-sm">+</button>`;
 
-        function playFeedbackSound() {
-            if (currentSound === 'none') return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-            osc.frequency.setValueAtTime(currentSound === 'crystal' ? 880 : currentSound === 'wooden' ? 300 : 600, now);
-            gain.gain.setValueAtTime(0.1, now);
-            osc.start(); osc.stop(now + 0.1);
-            if (window.navigator.vibrate) window.navigator.vibrate(10);
-        }
-
-        function updateStaticText() {
-            const t = i18n[currentLang];
-            document.getElementById('label-streak').innerText = t.streak;
-            document.getElementById('unit-days').innerText = t.days;
-            document.getElementById('label-heatmap').innerText = t.heatmap;
-            document.getElementById('label-today-progress').innerText = t.todayProgress;
-            document.getElementById('unit-achieved').innerText = t.achieved;
-            document.getElementById('modal-cancel').innerText = t.cancel;
-            document.getElementById('modal-confirm').innerText = t.confirm;
-            document.getElementById('label-cat-select').innerText = t.catLabel;
-            document.getElementById('label-freq-select').innerText = t.freqLabel;
-            document.getElementById('label-sound-style').innerText = t.soundLabel;
-            document.getElementById('modal-input').placeholder = t.inputPlaceholder;
-
-            document.getElementById('today-date').innerText = new Date().toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', weekday: 'short' });
-
-            const freqSelect = document.getElementById('modal-freq');
-            freqSelect.innerHTML = Object.entries(t.freqOptions).map(([val, label]) => `<option value="${val}">${label}</option>`).join('');
-        }
-
-        function updateStats() {
-            const historyDates = new Set();
-            let todayDone = 0;
-            habits.forEach(h => {
-                Object.keys(h.history || {}).forEach(d => { if(h.history[d].allDone) historyDates.add(d); });
-                if(h.history?.[todayStr]?.allDone) todayDone++;
-            });
-            const dueTodayCount = habits.filter(h => {
-                const day = new Date().getDay();
-                if (h.freq === 'workday') return day >= 1 && day <= 5;
-                if (h.freq === 'weekend') return day === 0 || day === 6;
-                return true;
-            }).length;
-
-            document.getElementById('stat-total').innerText = todayDone;
-            document.getElementById('stat-goal').innerText = dueTodayCount;
-            document.getElementById('progress-bar').style.width = `${dueTodayCount ? (todayDone/dueTodayCount)*100 : 0}%`;
-
-            let streak = 0; let d = new Date();
-            while(historyDates.has(d.toISOString().split('T')[0])) { streak++; d.setDate(d.getDate()-1); }
-            document.getElementById('stat-streak').innerText = streak;
-
-            const wv = document.getElementById('week-view'); wv.innerHTML = '';
-            for(let i=6; i>=0; i--) {
-                const checkD = new Date(); checkD.setDate(checkD.getDate()-i);
-                const k = checkD.toISOString().split('T')[0];
-                wv.innerHTML += `<div class="day-box ${historyDates.has(k) ? 'completed' : ''}"></div>`;
-            }
-        }
-
-        function renderTabs() {
-            const nav = document.getElementById('category-tabs');
-            nav.innerHTML = '';
-            const t = i18n[currentLang];
-
-            const createTab = (id, label, isSystem = false) => {
-                const b = document.createElement('button');
-                b.className = `cat-item pb-1 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${currentCat === id ? 'tab-active' : 'text-slate-300'}`;
-                if (isEditMode && !isSystem) b.classList.add('editing-shake', 'text-indigo-400');
-                b.innerText = label;
-
-                b.onclick = () => {
-                    if (isEditMode && !isSystem) {
-                        openModal(t.editMode, label, (newName) => {
-                            if(newName) {
-                                const target = categories.find(c => c.id === id);
-                                if(target) target.name = newName;
-                                syncToCloud();
-                            }
-                        }, 'text', '', '', () => {
-                            categories = categories.filter(c => c.id !== id);
-                            habits.forEach(h => { if(h.category === id) h.category = categories[0].id; });
-                            if(currentCat === id) currentCat = 'ALL';
-                            syncToCloud();
-                        });
-                    } else {
-                        currentCat = id; refreshUI();
-                    }
-                };
-                return b;
-            };
-
-            nav.appendChild(createTab('ALL', t.allSystems, true));
-            categories.forEach(c => nav.appendChild(createTab(c.id, getCatName(c.id))));
-        }
-
-        function renderHabits() {
+            const filtered = activeCat === 'ALL' ? habits : habits.filter(h => h.cat === activeCat);
             const container = document.getElementById('habits-container');
-            container.innerHTML = '';
-            const t = i18n[currentLang];
+            container.innerHTML = filtered.map(h => renderHabitCard(h)).join('');
 
-            let filtered = habits.filter(h => {
-                const day = new Date().getDay();
-                if (h.freq === 'workday') return day >= 1 && day <= 5;
-                if (h.freq === 'weekend') return day === 0 || day === 6;
-                return true;
-            });
-            if(currentCat !== 'ALL') filtered = filtered.filter(h => h.category === currentCat);
+            initSortable();
+        }
 
-            filtered.forEach(habit => {
-                const dayState = habit.history?.[todayStr] || { allDone: false, subtasks: [] };
+        function renderHabitCard(h) {
+            const todayStr = getTodayKey();
+            const hist = h.history?.[todayStr] || { done: false, subData: {}, subDone: [] };
+            const { totalVal, totalTime } = getHabitStats(h);
+            const cat = categories.find(c => c.id === h.cat) || { icon: '📍' };
+            const unit = h.unit || 'min';
 
-                const card = document.createElement('div');
-                card.className = 'glass rounded-[2.5rem] p-6 shadow-sm border border-white/50 relative overflow-hidden group';
-                card.innerHTML = `
+            return `
+                <div class="glass p-6 rounded-[2.5rem] relative shadow-sm border-white overflow-hidden mb-6">
+                    <!-- Header -->
                     <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1 pr-4">
-                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${getCatName(habit.category)}</span>
-                            <h4 class="font-bold text-slate-800 text-lg leading-tight ${dayState.allDone ? 'opacity-30 line-through' : ''}">${habit.name}</h4>
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-50">${cat.icon}</div>
+                            <div>
+                                <h4 class="font-extrabold text-slate-800 text-lg leading-tight ${hist.done?'task-done':''}">${h.name}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="mode-badge ${h.type==='timer'?'bg-orange-50 text-orange-500':h.type==='input'?'bg-blue-50 text-blue-500':'bg-indigo-50 text-indigo-500'}">${h.type}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex gap-2">
-                            <button class="edit-habit p-3 bg-slate-50 text-slate-300 rounded-2xl btn-press"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                            <button class="main-check w-12 h-12 rounded-2xl flex items-center justify-center btn-press ${dayState.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
-                                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        <button onclick="window.editHabit(${h.id})" class="p-2 text-slate-300">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Statistics Summary -->
+                    ${h.type !== 'check' ? `
+                        <div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4">
+                            <div class="flex-1">
+                                <p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Total ${h.type === 'timer' ? 'Focus' : 'Value'}</p>
+                                <p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + unit}</p>
+                            </div>
+                            ${h.type === 'timer' && (!h.steps || h.steps.length === 0) ? `
+                                <button onclick="window.toggleMainTimer(${h.id})" class="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
+                                    ${hist.running ? 'Stop' : 'Start'}
+                                </button>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    <!-- Subtasks List -->
+                    <div class="space-y-4 mb-6 sub-tasks" data-id="${h.id}">
+                        ${(h.steps || []).map((step, idx) => {
+                            const subHist = hist.subData?.[idx] || { val: 0, timer: 0 };
+                            const isSubDone = hist.subDone?.includes(idx);
+                            return `
+                            <div class="subtask-row flex flex-col gap-2 p-3 bg-white/40 rounded-2xl border border-slate-50">
+                                <div class="flex items-center gap-3">
+                                    <span class="drag-handle opacity-40">⋮⋮</span>
+                                    <input type="checkbox" ${isSubDone?'checked':''} onchange="window.toggleSubDone(${h.id}, ${idx})" class="w-5 h-5 rounded-md border-2 border-slate-100 appearance-none checked:bg-indigo-600 transition-all">
+                                    <span class="text-sm font-bold flex-1 ${isSubDone?'task-done text-slate-300':''}">${step}</span>
+                                    <button onclick="window.removeStep(${h.id}, ${idx})" class="text-slate-200">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
+
+                                <!-- Subtask Controls -->
+                                ${h.type === 'timer' ? `
+                                    <div class="flex items-center justify-between ml-8 bg-orange-50/50 rounded-xl px-3 py-2">
+                                        <span class="text-[10px] font-mono font-bold text-orange-600">${formatTime(subHist.timer || 0)}</span>
+                                        <button onclick="window.toggleSubTimer(${h.id}, ${idx})" class="text-[9px] font-black uppercase text-orange-600 bg-white px-3 py-1 rounded-lg shadow-sm">
+                                            ${subHist.running ? 'Pause' : 'Start'}
+                                        </button>
+                                    </div>
+                                ` : ''}
+
+                                ${h.type === 'input' ? `
+                                    <div class="flex items-center gap-2 ml-8">
+                                        <input type="number" value="${subHist.val || ''}" onchange="window.updateSubVal(${h.id}, ${idx}, this.value)" placeholder="0" class="w-20 bg-blue-50/50 rounded-lg px-2 py-1 text-xs font-bold outline-none text-blue-600">
+                                        <span class="text-[9px] font-black text-blue-300 uppercase">${unit}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- Footer Controls -->
+                    <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
+                        <button onclick="window.confirmDelete(${h.id})" class="p-2 text-slate-200 hover:text-red-400">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+
+                        <div class="flex items-center gap-4">
+                            <!-- Bottom Right Add Button -->
+                            <button onclick="window.promptSubtask(${h.id})" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-[9px] font-black uppercase text-slate-500 active:bg-indigo-50">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+                                Add Subtask
+                            </button>
+
+                            <button onclick="window.toggleHabit(${h.id})" class="h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${hist.done?'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-110':'bg-slate-100 text-slate-300'}">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                             </button>
                         </div>
                     </div>
-                    <div class="space-y-2 subtask-list">
-                        ${(habit.subtasks || []).map((st, i) => `
-                            <div class="flex items-center gap-3 p-1 group/item">
-                                <div class="drag-handle text-slate-200 cursor-grab"><svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg></div>
-                                <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0" data-idx="${i}" ${dayState.subtasks.includes(i) ? 'checked' : ''}>
-                                <span class="text-sm font-semibold flex-1 ${dayState.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="mt-5 pt-4 border-t border-slate-50/50 flex justify-between items-center">
-                        <button class="del-habit p-2 text-slate-200 hover:text-red-400"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                        <button class="add-sub text-[9px] font-black text-indigo-400 uppercase tracking-widest">${t.addSub}</button>
-                    </div>
-                `;
+                </div>
+            `;
+        }
 
-                const subList = card.querySelector('.subtask-list');
-                new Sortable(subList, { handle: '.drag-handle', animation: 150, onEnd: (evt) => {
-                    const item = habit.subtasks.splice(evt.oldIndex, 1)[0];
-                    habit.subtasks.splice(evt.newIndex, 0, item);
-                    if(habit.history[todayStr]) habit.history[todayStr].subtasks = [];
-                    syncToCloud();
-                }});
+        // --- SUBTASK LOGIC ---
 
-                card.querySelector('.main-check').onclick = () => {
-                    if (!habit.history) habit.history = {};
-                    if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
-                    const d = habit.history[todayStr];
-                    if(d.allDone) delete habit.history[todayStr];
-                    else {
-                        d.allDone = true;
-                        d.subtasks = habit.subtasks.map((_, i) => i);
-                        playFeedbackSound();
-                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 } });
+        window.toggleSubTimer = (hId, sIdx) => {
+            const h = habits.find(x => x.id === hId);
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
+            const hist = h.history[today];
+            if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
+
+            const sub = hist.subData[sIdx];
+            if(sub.running) {
+                sub.running = false;
+                clearInterval(timerInterval);
+                timerInterval = null;
+            } else {
+                // Stop any other running timer
+                habits.forEach(habit => {
+                    const hHist = habit.history?.[today];
+                    if(hHist && hHist.subData) {
+                        Object.values(hHist.subData).forEach(s => s.running = false);
                     }
-                    syncToCloud();
-                };
-
-                card.querySelectorAll('.sub-check').forEach(cb => {
-                    cb.onclick = () => {
-                        if (!habit.history) habit.history = {};
-                        if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
-                        const d = habit.history[todayStr]; const idx = parseInt(cb.dataset.idx);
-                        const pos = d.subtasks.indexOf(idx);
-                        if(pos > -1) d.subtasks.splice(pos, 1); else d.subtasks.push(idx);
-                        d.allDone = habit.subtasks.length > 0 && d.subtasks.length === habit.subtasks.length;
-                        if(d.allDone) { playFeedbackSound(); confetti({ particleCount: 80 }); }
-                        syncToCloud();
-                    };
                 });
+                sub.running = true;
+                if(timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    sub.timer = (sub.timer || 0) + 1;
+                    render();
+                }, 1000);
+            }
+            render();
+        };
 
-                card.querySelector('.add-sub').onclick = () => openModal(t.addSub, "", (txt) => { if(txt){habit.subtasks.push(txt); syncToCloud();} });
-                card.querySelector('.edit-habit').onclick = () => openModal(t.editHabit, habit.name, (n, c, f) => { habit.name=n; habit.category=c; habit.freq=f; syncToCloud(); }, 'habit', habit.category, habit.freq);
-                card.querySelector('.del-habit').onclick = () => { habits = habits.filter(h => h.id !== habit.id); syncToCloud(); };
+        window.updateSubVal = (hId, sIdx, val) => {
+            const h = habits.find(x => x.id === hId);
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
+            const hist = h.history[today];
+            if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
+            hist.subData[sIdx].val = Number(val);
+            sync(); render();
+        };
 
-                container.appendChild(card);
+        window.toggleSubDone = (hId, sIdx) => {
+            const h = habits.find(x => x.id === hId);
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
+            const hist = h.history[today];
+            if(!hist.subDone) hist.subDone = [];
+
+            if(hist.subDone.includes(sIdx)) hist.subDone = hist.subDone.filter(i => i !== sIdx);
+            else hist.subDone.push(sIdx);
+
+            // Auto check main habit if all subtasks are done
+            if(h.steps && hist.subDone.length === h.steps.length) hist.done = true;
+            else if(h.steps && hist.subDone.length < h.steps.length) hist.done = false;
+
+            sync(); render();
+        };
+
+        // --- COMMON LOGIC ---
+
+        window.setCat = id => { activeCat = id; render(); };
+
+        window.promptSubtask = id => {
+            openModal("Add Subtask", `<input id="sub-input" placeholder="Task name..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all">`, () => {
+                const val = document.getElementById('sub-input').value;
+                if(val) {
+                    const h = habits.find(x => x.id === id);
+                    if(!h.steps) h.steps = [];
+                    h.steps.push(val);
+                    sync(); render();
+                }
+            });
+            setTimeout(() => document.getElementById('sub-input').focus(), 100);
+        };
+
+        window.toggleHabit = id => {
+            const h = habits.find(x => x.id === id);
+            const today = getTodayKey();
+            if(!h.history) h.history = {};
+            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
+            h.history[today].done = !h.history[today].done;
+            if(h.history[today].done) {
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+            }
+            sync(); render();
+        };
+
+        window.addCategory = () => {
+            openModal("New Category", `
+                <input id="cat-icon" placeholder="Emoji" class="w-full p-4 bg-slate-50 rounded-2xl text-2xl text-center mb-4">
+                <input id="cat-name" placeholder="Name" class="w-full p-4 bg-slate-50 rounded-2xl font-bold">
+            `, () => {
+                const icon = document.getElementById('cat-icon').value || '📍';
+                const name = document.getElementById('cat-name').value || 'New';
+                categories.push({ id: 'cat_' + Date.now(), icon, name });
+                sync(); render();
+            });
+        };
+
+        window.addHabitBtn = document.getElementById('add-habit-btn');
+        addHabitBtn.onclick = () => {
+            openModal("Create Habit", `
+                <input id="h-name" placeholder="Habit name..." class="w-full p-5 bg-slate-50 rounded-3xl font-bold mb-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
+                        <option value="check">Check-only</option>
+                        <option value="timer">Timer Mode</option>
+                        <option value="input">Value Mode</option>
+                    </select>
+                    <input id="h-unit" placeholder="Unit (e.g. min)" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
+                </div>
+            `, () => {
+                const name = document.getElementById('h-name').value;
+                if(name) {
+                    habits.push({ id: Date.now(), name, cat: 'daily', type: document.getElementById('h-type').value, unit: document.getElementById('h-unit').value, steps: [], history: {} });
+                    sync(); render();
+                }
+            });
+        };
+
+        window.confirmDelete = id => {
+            if(confirm("Delete this habit?")) {
+                habits = habits.filter(h => h.id !== id);
+                sync(); render();
+            }
+        };
+
+        function formatTime(s) {
+            const m = Math.floor(s/60);
+            const sec = s % 60;
+            return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+        }
+
+        const modal = document.getElementById('modal');
+        function openModal(title, html, onOk) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-content').innerHTML = html;
+            modal.classList.remove('hidden');
+            document.getElementById('modal-ok').onclick = () => { onOk(); modal.classList.add('hidden'); };
+            document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+        }
+
+        function initSortable() {
+            document.querySelectorAll('.sub-tasks').forEach(el => {
+                new Sortable(el, { handle: '.drag-handle', animation: 200, onEnd: (e) => {
+                    const hId = parseInt(el.dataset.id);
+                    const h = habits.find(x => x.id === hId);
+                    const steps = [...h.steps];
+                    const [moved] = steps.splice(e.oldIndex, 1);
+                    steps.splice(e.newIndex, 0, moved);
+                    h.steps = steps;
+                    sync();
+                }});
             });
         }
 
-        // --- Modal System ---
-        function openModal(title, val, cb, type='text', catVal='', freqVal='daily', delCb = null) {
-            modalCallback = cb; modalDeleteCallback = delCb;
-            const t = i18n[currentLang];
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('ui-modal').classList.replace('hidden', 'flex');
-            ['modal-input', 'modal-habit-extras', 'settings-extras', 'modal-extra-actions'].forEach(s => document.getElementById(s).classList.add('hidden'));
-
-            if (delCb) document.getElementById('modal-extra-actions').classList.remove('hidden');
-
-            if(type === 'habit') {
-                document.getElementById('modal-input').classList.remove('hidden'); document.getElementById('modal-input').value = val;
-                document.getElementById('modal-habit-extras').classList.remove('hidden');
-                document.getElementById('modal-select').innerHTML = categories.map(c => `<option value="${c.id}" ${c.id === catVal ? 'selected' : ''}>${getCatName(c.id)}</option>`).join('');
-                document.getElementById('modal-freq').value = freqVal;
-            } else if(type === 'settings') {
-                document.getElementById('settings-extras').classList.remove('hidden');
-            } else {
-                document.getElementById('modal-input').classList.remove('hidden'); document.getElementById('modal-input').value = val;
-            }
-            setTimeout(() => { document.getElementById('modal-content').classList.replace('scale-95', 'scale-100'); document.getElementById('modal-content').classList.replace('opacity-0', 'opacity-100'); }, 10);
-        }
-
-        function closeModal() {
-            document.getElementById('modal-content').classList.replace('scale-100', 'scale-95');
-            document.getElementById('modal-content').classList.replace('opacity-100', 'opacity-0');
-            setTimeout(() => document.getElementById('ui-modal').classList.replace('flex', 'hidden'), 200);
-        }
-
-        // --- Event Listeners ---
-        document.getElementById('lang-toggle').onclick = () => {
-            currentLang = currentLang === 'zh' ? 'en' : 'zh';
-            localStorage.setItem('app_lang', currentLang);
-            refreshUI();
-        };
-
-        document.getElementById('edit-mode-toggle').onclick = () => {
-            isEditMode = !isEditMode;
-            document.getElementById('edit-mode-toggle').classList.toggle('text-indigo-600', isEditMode);
-            renderTabs();
-        };
-
-        document.getElementById('modal-confirm').onclick = () => {
-            const val = document.getElementById('modal-input').value;
-            if(!document.getElementById('modal-habit-extras').classList.contains('hidden')) {
-                modalCallback(val, document.getElementById('modal-select').value, document.getElementById('modal-freq').value);
-            } else if (modalCallback) {
-                modalCallback(val);
-            }
-            closeModal();
-        };
-
-        document.getElementById('modal-delete').onclick = () => { if(modalDeleteCallback) modalDeleteCallback(); closeModal(); };
-        document.getElementById('modal-cancel').onclick = closeModal;
-        document.getElementById('btn-settings').onclick = () => openModal(i18n[currentLang].settings, "", null, 'settings');
-
-        document.getElementById('add-cat-trigger').onclick = () => openModal(i18n[currentLang].addCat, "", (n) => {
-            if(n){categories.push({id: 'cat_' + Date.now(), name: n}); syncToCloud();}
-        });
-
-        document.getElementById('main-add-btn').onclick = () => openModal(i18n[currentLang].addHabit, "", (n,c,f) => {
-            if(n) { habits.push({ id: Date.now(), name: n, category: c, freq: f, subtasks: [], history: {} }); syncToCloud(); }
-        }, 'habit', categories[0]?.id || 'daily');
-
-        document.querySelectorAll('.sound-btn').forEach(btn => {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
-                currentSound = btn.dataset.sound;
-                localStorage.setItem('app_sound_v2', currentSound);
-                playFeedbackSound();
+                document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
+                document.getElementById(btn.dataset.target).classList.add('page-active');
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active', 'text-indigo-600');
+                    b.classList.add('text-slate-300');
+                });
+                btn.classList.add('tab-active', 'text-indigo-600');
             };
         });
-
-        // Start Auth
-        initAuth();
     </script>
 </body>
 </html>
