@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Focus Pro - Subtask Mastery</title>
+    <title>Focus Pro - Professional Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -18,43 +18,62 @@
         .tab-active { color: #6366f1; transform: scale(1.1); }
         .task-done { text-decoration: line-through; opacity: 0.4; }
         .mode-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
-        input[type="checkbox"]:checked { background-color: #6366f1; border-color: #6366f1; }
-        .subtask-row { transition: all 0.2s ease; }
-        .subtask-row:active { background: #f1f5f9; }
+        .ready-to-check { animation: pulse-purple 2s infinite; border: 2px solid #6366f1 !important; transform: scale(1.05); }
+        @keyframes pulse-purple { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
+        .emoji-btn.selected { background-color: #6366f1; color: white; transform: scale(1.1); }
     </style>
 </head>
 <body class="min-h-screen pb-32">
 
-    <!-- Loading Mask -->
     <div id="loading" class="fixed inset-0 bg-white z-[100] flex items-center justify-center">
         <div class="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
     </div>
 
     <div id="app" class="max-w-md mx-auto px-6 pt-10">
-
-        <!-- Check-in Page -->
         <section id="page-checkin" class="page-content page-active">
             <header class="flex justify-between items-center mb-6">
                 <div>
-                    <h1 class="text-3xl font-black tracking-tighter italic text-slate-800">Focus.</h1>
+                    <h1 class="text-3xl font-black tracking-tighter italic text-slate-800" id="ui-title">Focus.</h1>
                     <p id="current-date" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1"></p>
                 </div>
                 <button id="add-habit-btn" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-transform">
                     <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
                 </button>
             </header>
-
             <div class="flex gap-3 mb-6 overflow-x-auto no-scrollbar items-center py-2" id="category-bar"></div>
             <div id="habits-container" class="space-y-6"></div>
         </section>
 
-        <!-- Insights Page (Simplified) -->
-        <section id="page-insight" class="page-content text-center py-20">
-            <p class="text-slate-400 font-bold">Insight data visualization here...</p>
+        <section id="page-insight" class="page-content py-10 text-center">
+            <h2 class="text-xl font-black mb-8 italic text-left">Analytics.</h2>
+            <div class="glass p-10 rounded-[2.5rem] text-slate-400 font-bold text-sm">Data visualization coming soon...</div>
+        </section>
+
+        <section id="page-config" class="page-content py-10">
+            <h2 class="text-xl font-black mb-8 italic" id="ui-config-title">Config.</h2>
+            <div class="space-y-4">
+                <div class="glass p-6 rounded-[2rem] flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-sound">Sound Effects</span>
+                    <button id="btn-sound" class="w-12 h-6 bg-slate-200 rounded-full relative transition-colors">
+                        <div id="sound-knob" class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform"></div>
+                    </button>
+                </div>
+                <div class="glass p-6 rounded-[2rem] flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-lang">Language</span>
+                    <select id="select-lang" class="bg-transparent text-xs font-black outline-none border-none text-right appearance-none">
+                        <option value="zh">中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <button onclick="window.exportData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-slate-400 tracking-widest">Export JSON</button>
+                    <button onclick="window.importData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-indigo-600 tracking-widest">Import JSON</button>
+                </div>
+                <input type="file" id="import-file" class="hidden" accept=".json">
+            </div>
         </section>
     </div>
 
-    <!-- Navigation -->
     <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[300px] glass rounded-full flex justify-around items-center py-3 px-2 z-50 shadow-xl border-white/50">
         <button data-target="page-checkin" class="tab-btn p-3 text-indigo-600 tab-active">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -62,17 +81,20 @@
         <button data-target="page-insight" class="tab-btn p-3 text-slate-300">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </button>
+        <button data-target="page-config" class="tab-btn p-3 text-slate-300">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
     </nav>
 
-    <!-- Modal System -->
     <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto relative no-scrollbar">
             <h3 class="text-xl font-black mb-6 italic" id="modal-title">Settings.</h3>
             <div id="modal-content" class="space-y-4"></div>
             <div class="flex gap-3 mt-8">
                 <button id="modal-cancel" class="flex-1 py-4 font-bold text-slate-300 text-[10px] uppercase tracking-widest text-center">Cancel</button>
                 <button id="modal-ok" class="flex-[2] bg-indigo-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">Confirm</button>
             </div>
+            <button id="modal-delete-sec" class="hidden absolute top-8 right-8 text-red-400 p-2"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
         </div>
     </div>
 
@@ -85,17 +107,33 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-subtask';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'focus-pro-subtask-enhanced-v2';
 
         let user = null;
         let habits = [];
         let categories = [
-            { id: 'daily', icon: '✨', name: 'Daily' },
-            { id: 'work', icon: '💼', name: 'Work' }
+            { id: 'daily', name: 'Daily' },
+            { id: 'work', name: 'Work' }
         ];
         let activeCat = 'ALL';
+        let config = { sound: true, lang: 'zh' };
         let timerInterval = null;
         const getTodayKey = () => new Date().toISOString().split('T')[0];
+
+        const EMOJI_LIST = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '☺️', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '😎', '🤓', '🥳', '🤯', '😴', '✨', '🔥', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '💪', '✍️', '🙏', '🤝', '👍', '👎', '👊', '👏', '🙌', '🧠', '👀', '👁️', '🏃', '🧘', '💪', '🏀', '⚽️', '🏈', '⚾️', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🛹', '🚲', '🚵', '🧗', '🏊', '🚣', '🎨', '🎹', '🎸', '🎮', '🎲', '🍎', '🍏', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🥦', '🥑', '🥩', '🥚', '🥞', '🍵', '☕️', '🍺', '📚', '💻', '🎨', '🎹', '🌱', '🧹', '🍵', '💤', '✍️', '🚿', '🛀', '🧼', '🪥', '⏰', '🔋', '📱', '💡', '📅', '🗑️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐣', '🦄', '🐝', '🦋', '🌸', '🌵', '🌲', '🍀', '🌞', '🌙', '🌊'];
+        const I18N = {
+            zh: { title: '专注.', config: '配置.', sound: '音效开关', lang: '语言设置', add: '新建习惯', name: '习惯名称', type: '记录模式', unit: '单位', deleteQ: '确定删除吗？', cat: '所属分类', emoji: '选择图标' },
+            en: { title: 'Focus.', config: 'Config.', sound: 'Sound FX', lang: 'Language', add: 'New Habit', name: 'Habit Name', type: 'Mode', unit: 'Unit', deleteQ: 'Confirm Delete?', cat: 'Category', emoji: 'Select Icon' }
+        };
+
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+        initAuth();
 
         onAuthStateChanged(auth, u => {
             user = u;
@@ -105,149 +143,103 @@
                         const d = snap.data();
                         habits = d.habits || [];
                         categories = d.categories || categories;
+                        config = { ...config, ...(d.config || {}) };
                     }
+                    applyConfig();
                     render();
                     document.getElementById('loading').style.display = 'none';
-                });
-            } else {
-                signInAnonymously(auth);
+                }, (error) => console.error(error));
             }
         });
 
         async function sync() {
             if (!user) return;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), { habits, categories });
-            } catch (e) { console.error("Sync Error:", e); }
+            try { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), { habits, categories, config }); } catch (e) { console.error(e); }
         }
 
-        // Logic for aggregation
-        function getHabitStats(h) {
-            const todayStr = getTodayKey();
-            const hist = h.history?.[todayStr] || { done: false, subData: {} };
-            let totalVal = 0;
-            let totalTime = 0;
+        function applyConfig() {
+            const L = I18N[config.lang];
+            document.getElementById('ui-title').innerText = L.title;
+            document.getElementById('ui-config-title').innerText = L.config;
+            document.getElementById('ui-sound').innerText = L.sound;
+            document.getElementById('ui-lang').innerText = L.lang;
+            document.getElementById('select-lang').value = config.lang;
+            document.getElementById('btn-sound').classList.toggle('bg-indigo-600', config.sound);
+            document.getElementById('sound-knob').style.transform = config.sound ? 'translateX(24px)' : 'translateX(0px)';
+        }
 
-            if (h.steps && h.steps.length > 0) {
-                h.steps.forEach((_, idx) => {
-                    const data = hist.subData?.[idx] || { val: 0, timer: 0 };
-                    totalVal += Number(data.val || 0);
-                    totalTime += Number(data.timer || 0);
+        function getHabitStats(h) {
+            const hist = h.history?.[getTodayKey()] || { done: false, subData: {} };
+            let totalVal = 0, totalTime = 0;
+            if (h.steps?.length) {
+                h.steps.forEach((_, i) => {
+                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
+                    totalVal += Number(d.val || 0); totalTime += Number(d.timer || 0);
                 });
-            } else {
-                totalVal = Number(hist.val || 0);
-                totalTime = Number(hist.timer || 0);
-            }
-            return { totalVal, totalTime, isDone: hist.done };
+            } else { totalVal = Number(hist.val || 0); totalTime = Number(hist.timer || 0); }
+            return { totalVal, totalTime };
         }
 
         function render() {
-            const today = new Date();
-            document.getElementById('current-date').innerText = today.toLocaleDateString('zh-CN', { weekday: 'long', month: 'short', day: 'numeric' });
+            const L = I18N[config.lang];
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString(config.lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
             const catBar = document.getElementById('category-bar');
             catBar.innerHTML = `<button onclick="window.setCat('ALL')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 ${activeCat==='ALL'?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">All</button>` +
-                categories.map(c => `<button onclick="window.setCat('${c.id}')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 whitespace-nowrap ${activeCat===c.id?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${c.icon} ${c.name}</button>`).join('') +
+                categories.map(c => `<button oncontextmenu="event.preventDefault(); window.editCategory('${c.id}')" onclick="window.setCat('${c.id}')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 whitespace-nowrap ${activeCat===c.id?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${c.name}</button>`).join('') +
                 `<button onclick="window.addCategory()" class="w-9 h-9 rounded-full bg-white text-indigo-400 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-sm">+</button>`;
 
             const filtered = activeCat === 'ALL' ? habits : habits.filter(h => h.cat === activeCat);
-            const container = document.getElementById('habits-container');
-            container.innerHTML = filtered.map(h => renderHabitCard(h)).join('');
-
+            document.getElementById('habits-container').innerHTML = filtered.map(h => renderHabitCard(h)).join('');
             initSortable();
         }
 
         function renderHabitCard(h) {
-            const todayStr = getTodayKey();
-            const hist = h.history?.[todayStr] || { done: false, subData: {}, subDone: [] };
+            const today = getTodayKey();
+            const hist = h.history?.[today] || { done: false, subData: {}, subDone: [] };
             const { totalVal, totalTime } = getHabitStats(h);
-            const cat = categories.find(c => c.id === h.cat) || { icon: '📍' };
-            const unit = h.unit || 'min';
+            const icon = h.emoji || '✨';
+            const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => hist.subDone?.includes(i));
+            const isReady = h.steps?.length > 0 ? (allSubDone && !hist.done) : !hist.done;
 
             return `
                 <div class="glass p-6 rounded-[2.5rem] relative shadow-sm border-white overflow-hidden mb-6">
-                    <!-- Header -->
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-50">${cat.icon}</div>
+                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-50">${icon}</div>
                             <div>
                                 <h4 class="font-extrabold text-slate-800 text-lg leading-tight ${hist.done?'task-done':''}">${h.name}</h4>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="mode-badge ${h.type==='timer'?'bg-orange-50 text-orange-500':h.type==='input'?'bg-blue-50 text-blue-500':'bg-indigo-50 text-indigo-500'}">${h.type}</span>
-                                </div>
+                                <div class="flex items-center gap-2 mt-1"><span class="mode-badge ${h.type==='timer'?'bg-orange-50 text-orange-500':h.type==='input'?'bg-blue-50 text-blue-500':'bg-indigo-50 text-indigo-500'}">${h.type}</span></div>
                             </div>
                         </div>
-                        <button onclick="window.editHabit(${h.id})" class="p-2 text-slate-300">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        </button>
+                        <button onclick="window.editHabitDetails(${h.id})" class="p-2 text-slate-300"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                     </div>
 
-                    <!-- Statistics Summary -->
-                    ${h.type !== 'check' ? `
-                        <div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4">
-                            <div class="flex-1">
-                                <p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Total ${h.type === 'timer' ? 'Focus' : 'Value'}</p>
-                                <p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + unit}</p>
-                            </div>
-                            ${h.type === 'timer' && (!h.steps || h.steps.length === 0) ? `
-                                <button onclick="window.toggleMainTimer(${h.id})" class="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
-                                    ${hist.running ? 'Stop' : 'Start'}
-                                </button>
-                            ` : ''}
-                        </div>
-                    ` : ''}
+                    ${h.type !== 'check' ? `<div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4"><div class="flex-1"><p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Today's Progress</p><p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + (h.unit||'min')}</p></div></div>` : ''}
 
-                    <!-- Subtasks List -->
-                    <div class="space-y-4 mb-6 sub-tasks" data-id="${h.id}">
+                    <div class="space-y-3 mb-6 sub-tasks" data-id="${h.id}">
                         ${(h.steps || []).map((step, idx) => {
                             const subHist = hist.subData?.[idx] || { val: 0, timer: 0 };
-                            const isSubDone = hist.subDone?.includes(idx);
+                            const done = hist.subDone?.includes(idx);
                             return `
-                            <div class="subtask-row flex flex-col gap-2 p-3 bg-white/40 rounded-2xl border border-slate-50">
-                                <div class="flex items-center gap-3">
-                                    <span class="drag-handle opacity-40">⋮⋮</span>
-                                    <input type="checkbox" ${isSubDone?'checked':''} onchange="window.toggleSubDone(${h.id}, ${idx})" class="w-5 h-5 rounded-md border-2 border-slate-100 appearance-none checked:bg-indigo-600 transition-all">
-                                    <span class="text-sm font-bold flex-1 ${isSubDone?'task-done text-slate-300':''}">${step}</span>
-                                    <button onclick="window.removeStep(${h.id}, ${idx})" class="text-slate-200">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                                    </button>
+                            <div class="subtask-row flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-slate-50">
+                                <span class="drag-handle opacity-20 text-[10px] cursor-grab active:cursor-grabbing">⋮⋮</span>
+                                <input type="checkbox" ${done?'checked':''} onchange="window.toggleSubDone(${h.id}, ${idx})" class="w-5 h-5 rounded-md border-2 border-slate-100 appearance-none checked:bg-indigo-600 transition-all">
+                                <span class="text-sm font-bold flex-1 truncate ${done?'task-done text-slate-300':''}">${step}</span>
+                                <div class="flex items-center gap-2">
+                                    ${h.type === 'timer' ? `<span class="text-[10px] font-mono font-bold text-orange-600">${formatTime(subHist.timer || 0)}</span><button onclick="window.toggleSubTimer(${h.id}, ${idx})" class="p-1.5 rounded-lg bg-orange-50 text-orange-600"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">${subHist.running ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' : '<path d="M8 5v14l11-7z"/>'}</svg></button>` : ''}
+                                    ${h.type === 'input' ? `<input type="number" value="${subHist.val||''}" onchange="window.updateSubVal(${h.id}, ${idx}, this.value)" placeholder="0" class="w-12 bg-blue-50/50 rounded-lg px-2 py-1 text-[10px] font-bold outline-none text-blue-600 text-right">` : ''}
+                                    <button onclick="window.removeStep(${h.id}, ${idx})" class="text-slate-200 ml-1"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
                                 </div>
-
-                                <!-- Subtask Controls -->
-                                ${h.type === 'timer' ? `
-                                    <div class="flex items-center justify-between ml-8 bg-orange-50/50 rounded-xl px-3 py-2">
-                                        <span class="text-[10px] font-mono font-bold text-orange-600">${formatTime(subHist.timer || 0)}</span>
-                                        <button onclick="window.toggleSubTimer(${h.id}, ${idx})" class="text-[9px] font-black uppercase text-orange-600 bg-white px-3 py-1 rounded-lg shadow-sm">
-                                            ${subHist.running ? 'Pause' : 'Start'}
-                                        </button>
-                                    </div>
-                                ` : ''}
-
-                                ${h.type === 'input' ? `
-                                    <div class="flex items-center gap-2 ml-8">
-                                        <input type="number" value="${subHist.val || ''}" onchange="window.updateSubVal(${h.id}, ${idx}, this.value)" placeholder="0" class="w-20 bg-blue-50/50 rounded-lg px-2 py-1 text-xs font-bold outline-none text-blue-600">
-                                        <span class="text-[9px] font-black text-blue-300 uppercase">${unit}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            `;
+                            </div>`;
                         }).join('')}
                     </div>
 
-                    <!-- Footer Controls -->
                     <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
-                        <button onclick="window.confirmDelete(${h.id})" class="p-2 text-slate-200 hover:text-red-400">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-
+                        <button onclick="window.confirmDeleteHabit(${h.id})" class="p-2 text-slate-200 hover:text-red-400 active:scale-90 transition-transform"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                         <div class="flex items-center gap-4">
-                            <!-- Bottom Right Add Button -->
-                            <button onclick="window.promptSubtask(${h.id})" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-[9px] font-black uppercase text-slate-500 active:bg-indigo-50">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-                                Add Subtask
-                            </button>
-
-                            <button onclick="window.toggleHabit(${h.id})" class="h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${hist.done?'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-110':'bg-slate-100 text-slate-300'}">
+                            <button onclick="window.promptSubtask(${h.id})" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-[9px] font-black uppercase text-slate-500 active:bg-indigo-50">Add Step</button>
+                            <button onclick="window.toggleHabit(${h.id})" class="h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${hist.done?'bg-green-500 text-white shadow-xl shadow-green-100 scale-110': (isReady ? 'ready-to-check bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-300')}">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                             </button>
                         </div>
@@ -256,174 +248,232 @@
             `;
         }
 
-        // --- SUBTASK LOGIC ---
+        // --- Core Logic ---
 
-        window.toggleSubTimer = (hId, sIdx) => {
-            const h = habits.find(x => x.id === hId);
-            const today = getTodayKey();
-            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
-            const hist = h.history[today];
-            if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
+        window.addHabit = () => {
+            const L = I18N[config.lang];
+            let selectedEmoji = EMOJI_LIST[0];
 
-            const sub = hist.subData[sIdx];
-            if(sub.running) {
-                sub.running = false;
-                clearInterval(timerInterval);
-                timerInterval = null;
-            } else {
-                // Stop any other running timer
-                habits.forEach(habit => {
-                    const hHist = habit.history?.[today];
-                    if(hHist && hHist.subData) {
-                        Object.values(hHist.subData).forEach(s => s.running = false);
-                    }
-                });
-                sub.running = true;
-                if(timerInterval) clearInterval(timerInterval);
-                timerInterval = setInterval(() => {
-                    sub.timer = (sub.timer || 0) + 1;
-                    render();
-                }, 1000);
-            }
-            render();
+            const html = `
+                <div class="space-y-4">
+                    <input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold border-none outline-none focus:ring-2 ring-indigo-100 transition-all">
+
+                    <div class="p-1">
+                        <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p>
+                        <div class="grid grid-cols-8 gap-2">
+                            ${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.cat}</p>
+                        <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs appearance-none border-none outline-none">
+                            ${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${c.name}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.type}</p>
+                            <select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs appearance-none border-none outline-none">
+                                <option value="check">Check</option>
+                                <option value="timer">Timer</option>
+                                <option value="input">Value</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">${L.unit}</p>
+                            <input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs border-none outline-none">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            window.currentEmoji = selectedEmoji;
+            window.selectEmoji = (btn, e) => {
+                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                window.currentEmoji = e;
+            };
+
+            openModal(L.add, html, () => {
+                const name = document.getElementById('h-name').value;
+                if(name) {
+                    habits.push({
+                        id: Date.now(),
+                        name,
+                        emoji: window.currentEmoji,
+                        cat: document.getElementById('h-cat').value,
+                        type: document.getElementById('h-type').value,
+                        unit: document.getElementById('h-unit').value,
+                        steps: [],
+                        history: { [getTodayKey()]: { done: false, subData: {}, subDone: [] } }
+                    });
+                    sync(); render();
+                }
+            });
         };
 
-        window.updateSubVal = (hId, sIdx, val) => {
-            const h = habits.find(x => x.id === hId);
-            const today = getTodayKey();
-            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
-            const hist = h.history[today];
-            if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
-            hist.subData[sIdx].val = Number(val);
-            sync(); render();
+        window.editHabitDetails = (id) => {
+            const h = habits.find(x => x.id === id);
+            if(!h) return;
+            const L = I18N[config.lang];
+            let selectedEmoji = h.emoji || EMOJI_LIST[0];
+
+            const html = `
+                <div class="space-y-4">
+                    <input id="h-name" value="${h.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold border-none outline-none">
+                    <div class="p-1">
+                        <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p>
+                        <div class="grid grid-cols-8 gap-2">
+                            ${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}
+                        </div>
+                    </div>
+                    <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
+                        ${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${c.name}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+
+            window.currentEmoji = selectedEmoji;
+            window.selectEmoji = (btn, e) => {
+                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                window.currentEmoji = e;
+            };
+
+            openModal("Edit Habit", html, () => {
+                h.name = document.getElementById('h-name').value;
+                h.emoji = window.currentEmoji;
+                h.cat = document.getElementById('h-cat').value;
+                sync(); render();
+            });
         };
 
+        window.addCategory = () => {
+            openModal("New Category", `<input id="cat-name" placeholder="Category Name (e.g. Study)" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-none">`, () => {
+                const name = document.getElementById('cat-name').value;
+                if(name) {
+                    categories.push({ id: 'cat_' + Date.now(), name });
+                    sync(); render();
+                }
+            });
+        };
+
+        window.editCategory = (catId) => {
+            const c = categories.find(x => x.id === catId);
+            if(!c) return;
+            const delBtn = document.getElementById('modal-delete-sec');
+            delBtn.classList.remove('hidden');
+            delBtn.onclick = () => {
+                categories = categories.filter(x => x.id !== catId);
+                habits.forEach(h => { if(h.cat === catId) h.cat = 'daily'; });
+                modal.classList.add('hidden');
+                sync(); render();
+            };
+
+            openModal("Edit Category", `<input id="cat-name" value="${c.name}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
+                c.name = document.getElementById('cat-name').value;
+                sync(); render();
+            });
+        };
+
+        // --- Existing Mechanics ---
+        window.setCat = id => { activeCat = id; render(); };
+        window.confirmDeleteHabit = (id) => {
+            const L = I18N[config.lang];
+            openModal(L.deleteQ, `<p class="text-slate-400 font-bold text-sm">Once deleted, data cannot be recovered.</p>`, () => {
+                habits = habits.filter(h => h.id !== id);
+                sync(); render();
+            });
+        };
         window.toggleSubDone = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
             if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
             const hist = h.history[today];
-            if(!hist.subDone) hist.subDone = [];
-
             if(hist.subDone.includes(sIdx)) hist.subDone = hist.subDone.filter(i => i !== sIdx);
             else hist.subDone.push(sIdx);
-
-            // Auto check main habit if all subtasks are done
-            if(h.steps && hist.subDone.length === h.steps.length) hist.done = true;
-            else if(h.steps && hist.subDone.length < h.steps.length) hist.done = false;
-
             sync(); render();
         };
-
-        // --- COMMON LOGIC ---
-
-        window.setCat = id => { activeCat = id; render(); };
-
+        window.toggleHabit = id => {
+            const h = habits.find(x => x.id === id);
+            const today = getTodayKey();
+            if(!h.history[today]) h.history[today] = { done: false, subDone: [] };
+            const hist = h.history[today];
+            const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => hist.subDone?.includes(i));
+            if(h.steps?.length > 0 && !allSubDone && !hist.done) return;
+            hist.done = !hist.done;
+            if(hist.done) {
+                if(config.sound) { try { new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3').play(); } catch(e){} }
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+            }
+            sync(); render();
+        };
         window.promptSubtask = id => {
-            openModal("Add Subtask", `<input id="sub-input" placeholder="Task name..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all">`, () => {
+            openModal("New Step", `<input id="sub-input" autofocus placeholder="Task description..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none">`, () => {
                 const val = document.getElementById('sub-input').value;
                 if(val) {
                     const h = habits.find(x => x.id === id);
                     if(!h.steps) h.steps = [];
                     h.steps.push(val);
+                    if(h.history?.[getTodayKey()]) h.history[getTodayKey()].done = false;
                     sync(); render();
                 }
             });
-            setTimeout(() => document.getElementById('sub-input').focus(), 100);
         };
-
-        window.toggleHabit = id => {
-            const h = habits.find(x => x.id === id);
-            const today = getTodayKey();
-            if(!h.history) h.history = {};
-            if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
-            h.history[today].done = !h.history[today].done;
-            if(h.history[today].done) {
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+        window.toggleSubTimer = (hId, sIdx) => {
+            const h = habits.find(x => x.id === hId);
+            const hist = h.history[getTodayKey()] || { subData: {} };
+            if(!hist.subData[sIdx]) hist.subData[sIdx] = { timer: 0, val: 0 };
+            const sub = hist.subData[sIdx];
+            if(sub.running) { sub.running = false; clearInterval(timerInterval); timerInterval = null; }
+            else {
+                habits.forEach(h => { if(h.history?.[getTodayKey()]?.subData) Object.values(h.history[getTodayKey()].subData).forEach(s => s.running = false); });
+                sub.running = true;
+                if(timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => { sub.timer++; render(); }, 1000);
             }
+            render();
+        };
+        window.updateSubVal = (hId, sIdx, val) => {
+            const h = habits.find(x => x.id === hId);
+            if(!h.history[getTodayKey()]) h.history[getTodayKey()] = { subData: {} };
+            const hist = h.history[getTodayKey()];
+            if(!hist.subData[sIdx]) hist.subData[sIdx] = { val: 0 };
+            hist.subData[sIdx].val = Number(val); sync();
+        };
+        window.removeStep = (hId, sIdx) => {
+            const h = habits.find(x => x.id === hId);
+            h.steps.splice(sIdx, 1);
+            const hist = h.history?.[getTodayKey()];
+            if(hist?.subDone) hist.subDone = hist.subDone.filter(i => i !== sIdx).map(i => i > sIdx ? i - 1 : i);
             sync(); render();
         };
 
-        window.addCategory = () => {
-            openModal("New Category", `
-                <input id="cat-icon" placeholder="Emoji" class="w-full p-4 bg-slate-50 rounded-2xl text-2xl text-center mb-4">
-                <input id="cat-name" placeholder="Name" class="w-full p-4 bg-slate-50 rounded-2xl font-bold">
-            `, () => {
-                const icon = document.getElementById('cat-icon').value || '📍';
-                const name = document.getElementById('cat-name').value || 'New';
-                categories.push({ id: 'cat_' + Date.now(), icon, name });
-                sync(); render();
-            });
-        };
-
-        window.addHabitBtn = document.getElementById('add-habit-btn');
-        addHabitBtn.onclick = () => {
-            openModal("Create Habit", `
-                <input id="h-name" placeholder="Habit name..." class="w-full p-5 bg-slate-50 rounded-3xl font-bold mb-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
-                        <option value="check">Check-only</option>
-                        <option value="timer">Timer Mode</option>
-                        <option value="input">Value Mode</option>
-                    </select>
-                    <input id="h-unit" placeholder="Unit (e.g. min)" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
-                </div>
-            `, () => {
-                const name = document.getElementById('h-name').value;
-                if(name) {
-                    habits.push({ id: Date.now(), name, cat: 'daily', type: document.getElementById('h-type').value, unit: document.getElementById('h-unit').value, steps: [], history: {} });
-                    sync(); render();
-                }
-            });
-        };
-
-        window.confirmDelete = id => {
-            if(confirm("Delete this habit?")) {
-                habits = habits.filter(h => h.id !== id);
-                sync(); render();
-            }
-        };
-
-        function formatTime(s) {
-            const m = Math.floor(s/60);
-            const sec = s % 60;
-            return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-        }
-
-        const modal = document.getElementById('modal');
         function openModal(title, html, onOk) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-content').innerHTML = html;
+            document.getElementById('modal-delete-sec').classList.add('hidden');
             modal.classList.remove('hidden');
             document.getElementById('modal-ok').onclick = () => { onOk(); modal.classList.add('hidden'); };
             document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
         }
+        function formatTime(s) { const m = Math.floor(s/60); const sec = s % 60; return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
+        function initSortable() { document.querySelectorAll('.sub-tasks').forEach(el => { new Sortable(el, { handle: '.drag-handle', animation: 200, onEnd: (e) => { const hId = parseInt(el.dataset.id); const h = habits.find(x => x.id === hId); const [moved] = h.steps.splice(e.oldIndex, 1); h.steps.splice(e.newIndex, 0, moved); sync(); }}); }); }
 
-        function initSortable() {
-            document.querySelectorAll('.sub-tasks').forEach(el => {
-                new Sortable(el, { handle: '.drag-handle', animation: 200, onEnd: (e) => {
-                    const hId = parseInt(el.dataset.id);
-                    const h = habits.find(x => x.id === hId);
-                    const steps = [...h.steps];
-                    const [moved] = steps.splice(e.oldIndex, 1);
-                    steps.splice(e.newIndex, 0, moved);
-                    h.steps = steps;
-                    sync();
-                }});
-            });
-        }
-
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
-                document.getElementById(btn.dataset.target).classList.add('page-active');
-                document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.remove('tab-active', 'text-indigo-600');
-                    b.classList.add('text-slate-300');
-                });
-                btn.classList.add('tab-active', 'text-indigo-600');
-            };
-        });
+        document.getElementById('add-habit-btn').onclick = () => window.addHabit();
+        document.getElementById('btn-sound').onclick = () => { config.sound = !config.sound; applyConfig(); sync(); };
+        document.getElementById('select-lang').onchange = (e) => { config.lang = e.target.value; applyConfig(); render(); sync(); };
+        window.exportData = () => { const b = new Blob([JSON.stringify({ habits, config, categories })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `focus_pro_data.json`; a.click(); };
+        window.importData = () => document.getElementById('import-file').click();
+        document.getElementById('import-file').onchange = (e) => { const r = new FileReader(); r.onload = (re) => { try { const d = JSON.parse(re.target.result); habits = d.habits||[]; config = d.config||config; categories = d.categories||categories; sync(); render(); } catch(err) { alert("Invalid File"); }}; r.readAsText(e.target.files[0]); };
+        document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
+            document.getElementById(btn.dataset.target).classList.add('page-active');
+            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('tab-active', 'text-indigo-600'); b.classList.add('text-slate-300'); });
+            btn.classList.add('tab-active', 'text-indigo-600');
+        };});
     </script>
 </body>
 </html>
