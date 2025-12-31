@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Progress Obsession | 进度条强迫症</title>
+    <title>Progress Obsession</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -42,16 +42,37 @@
         .task-done { text-decoration: line-through; opacity: 0.3; }
         #progress-bar { transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-        /* Sortable styles */
-        .sortable-ghost { opacity: 0.4; background: #f1f5f9 !important; border-radius: 8px; }
-        .drag-handle { cursor: grab; }
-        .drag-handle:active { cursor: grabbing; }
-
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(1deg); }
+            75% { transform: rotate(-1deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .editing-shake {
+            animation: shake 0.3s infinite;
+            border: 1px dashed var(--primary);
+            border-radius: 8px;
+            padding: 2px 6px;
+        }
+
+        /* 加载动画 */
+        #loading-overlay {
+            position: fixed; inset: 0; background: white; z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s;
+        }
     </style>
 </head>
 <body class="min-h-screen pb-28">
+    <!-- Loading Screen -->
+    <div id="loading-overlay">
+        <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing with Cloud...</p>
+    </div>
+
     <div id="app" class="max-w-lg mx-auto px-5 pt-8">
         <!-- Header -->
         <header class="flex justify-between items-start mb-8">
@@ -76,21 +97,21 @@
         <div class="glass rounded-[2.5rem] p-6 mb-8 shadow-sm border border-white/60">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <p id="label-streak" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">连胜纪录</p>
+                    <p id="label-streak" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1"></p>
                     <div class="flex items-baseline gap-1">
                         <span id="stat-streak" class="text-4xl font-black text-slate-800">0</span>
-                        <span id="unit-days" class="text-slate-400 text-xs font-bold uppercase">Days</span>
+                        <span id="unit-days" class="text-slate-400 text-xs font-bold uppercase"></span>
                     </div>
                 </div>
                 <div class="text-right">
-                    <p id="label-heatmap" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">秩序热力图</p>
+                    <p id="label-heatmap" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2"></p>
                     <div id="week-view" class="flex gap-1.5 justify-end"></div>
                 </div>
             </div>
             <div class="bg-indigo-50/50 rounded-2xl p-4 flex justify-between items-center">
                 <div class="flex flex-col">
-                    <span id="label-today-progress" class="text-indigo-600 text-[10px] font-black uppercase tracking-tighter">Today's Progress</span>
-                    <span class="text-slate-800 text-xs font-bold"><span id="stat-total">0</span> / <span id="stat-goal">0</span> <span id="unit-achieved">项达成</span></span>
+                    <span id="label-today-progress" class="text-indigo-600 text-[10px] font-black uppercase tracking-tighter"></span>
+                    <span class="text-slate-800 text-xs font-bold"><span id="stat-total">0</span> / <span id="stat-goal">0</span> <span id="unit-achieved"></span></span>
                 </div>
                 <div class="h-2 w-32 bg-indigo-100 rounded-full overflow-hidden">
                     <div id="progress-bar" class="h-full bg-indigo-600" style="width: 0%"></div>
@@ -101,7 +122,12 @@
         <!-- Categories -->
         <div class="flex items-center gap-2 mb-6 border-b border-slate-100">
             <nav id="category-tabs" class="flex gap-6 overflow-x-auto pb-3 flex-1 no-scrollbar"></nav>
-            <button id="add-cat-trigger" class="pb-3 px-2 text-slate-300 hover:text-indigo-600 font-bold text-xl btn-press">+</button>
+            <div class="flex items-center gap-1 pb-3">
+                <button id="edit-mode-toggle" class="p-1 text-slate-300 hover:text-indigo-500 transition-colors">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button id="add-cat-trigger" class="px-1 text-slate-300 hover:text-indigo-600 font-bold text-xl btn-press">+</button>
+            </div>
         </div>
 
         <!-- Habits List -->
@@ -110,119 +136,181 @@
 
     <!-- Modal System -->
     <div id="ui-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl transition-all scale-95 opacity-0" id="modal-content">
+        <div class="bg-white w-full max-sm:max-w-xs rounded-[2.5rem] p-8 shadow-2xl transition-all scale-95 opacity-0" id="modal-content">
             <h3 id="modal-title" class="text-xl font-extrabold mb-6 text-slate-800 tracking-tight"></h3>
 
             <div id="modal-body" class="space-y-4">
-                <!-- Standard Input -->
-                <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium placeholder:text-slate-300" placeholder="在此输入...">
+                <input type="text" id="modal-input" class="w-full px-5 py-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium">
 
-                <!-- Habit Specific Extras (Used for Add & Edit) -->
                 <div id="modal-habit-extras" class="hidden space-y-4">
                     <div class="flex gap-4">
                         <div class="flex-1">
-                            <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block">分类 Category</label>
+                            <label id="label-cat-select" class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block"></label>
                             <select id="modal-select" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium"></select>
                         </div>
                         <div class="flex-1">
-                            <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block">频率 Frequency</label>
-                            <select id="modal-freq" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium">
-                                <option value="daily">每日</option>
-                                <option value="workday">工作日</option>
-                                <option value="weekend">周末</option>
-                            </select>
+                            <label id="label-freq-select" class="text-[9px] font-bold text-slate-400 uppercase ml-2 mb-1 block"></label>
+                            <select id="modal-freq" class="w-full px-4 py-3 rounded-xl bg-slate-50 outline-none text-slate-700 font-medium"></select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Settings Specific Extras -->
                 <div id="settings-extras" class="hidden space-y-6 pt-2">
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">音效风格 (Sound Style)</p>
+                        <p id="label-sound-style" class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3"></p>
                         <div class="grid grid-cols-2 gap-2" id="sound-options">
-                            <button data-sound="crystal" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">💎 水晶</button>
-                            <button data-sound="wooden" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🪵 木质</button>
-                            <button data-sound="bubble" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🫧 气泡</button>
-                            <button data-sound="none" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🔕 静音</button>
+                            <button data-sound="crystal" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">💎 Crystal</button>
+                            <button data-sound="wooden" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🪵 Wood</button>
+                            <button data-sound="bubble" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🫧 Bubble</button>
+                            <button data-sound="none" class="sound-btn p-3 rounded-xl border-2 border-slate-100 text-xs font-bold text-slate-500 hover:border-indigo-200 transition-all">🔕 Mute</button>
                         </div>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">数据管理 (Data Management)</p>
-                        <textarea id="modal-textarea" class="w-full h-32 px-5 py-4 rounded-2xl bg-slate-50 outline-none text-[10px] font-mono text-slate-400 no-scrollbar" placeholder="备份 JSON 数据..."></textarea>
                     </div>
                 </div>
             </div>
 
             <div id="modal-footer" class="flex gap-4 mt-8">
-                <button id="modal-cancel" class="flex-1 py-4 text-slate-400 font-bold text-xs uppercase tracking-widest">Cancel</button>
-                <button id="modal-confirm" class="flex-1 bg-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100 uppercase tracking-widest">Confirm</button>
+                <button id="modal-cancel" class="flex-1 py-4 text-slate-400 font-bold text-xs uppercase tracking-widest"></button>
+                <div id="modal-extra-actions" class="hidden">
+                    <button id="modal-delete" class="px-4 py-4 text-red-500 font-bold text-xs uppercase tracking-widest">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+                <button id="modal-confirm" class="flex-1 bg-indigo-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-100 uppercase tracking-widest"></button>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- i18n & Config ---
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config ---
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'progress-obsession-v1';
+
+        // --- i18n Dictionary ---
         const i18n = {
-            zh: { streak: "连胜纪录", days: "天", heatmap: "秩序热力图", todayProgress: "今日进度", achieved: "项达成", allSystems: "所有系统", cancel: "取消", confirm: "确定" },
-            en: { streak: "Streak Count", days: "Days", heatmap: "Order Heatmap", todayProgress: "Today's Progress", achieved: "Goals Done", allSystems: "All Systems", cancel: "Cancel", confirm: "Confirm" }
+            zh: {
+                streak: "连胜纪录", days: "天", heatmap: "秩序热力图", todayProgress: "今日进度", achieved: "项达成",
+                allSystems: "全部", cancel: "取消", confirm: "确定",
+                editMode: "编辑分类", addCat: "新分类", addHabit: "构建新秩序", editHabit: "编辑卡片",
+                catLabel: "分类 Category", freqLabel: "频率 Frequency", soundLabel: "音效风格", dataLabel: "数据管理",
+                addSub: "+ 拆解子任务", inputPlaceholder: "在此输入...",
+                freqOptions: { daily: "每日", workday: "工作日", weekend: "周末" },
+                settings: "系统设置", deleteTitle: "删除此项？",
+                builtInCats: { "daily": "日常", "personal": "个人" }
+            },
+            en: {
+                streak: "Streak Count", days: "Days", heatmap: "Order Heatmap", todayProgress: "Today's Progress", achieved: "Goals Done",
+                allSystems: "All", cancel: "Cancel", confirm: "Confirm",
+                editMode: "Edit Category", addCat: "New Category", addHabit: "New Habit", editHabit: "Edit Habit",
+                catLabel: "Category", freqLabel: "Frequency", soundLabel: "Sound Style", dataLabel: "Data Management",
+                addSub: "+ Add Subtask", inputPlaceholder: "Type here...",
+                freqOptions: { daily: "Daily", workday: "Workdays", weekend: "Weekends" },
+                settings: "Settings", deleteTitle: "Delete item?",
+                builtInCats: { "daily": "Daily", "personal": "Personal" }
+            }
         };
 
-        // --- Audio System ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // --- App State ---
+        let user = null;
+        let habits = [];
+        let categories = [
+            { id: 'daily', name: '日常' },
+            { id: 'personal', name: '个人' }
+        ];
+        let currentLang = localStorage.getItem('app_lang') || 'zh';
         let currentSound = localStorage.getItem('app_sound_v2') || 'crystal';
+        let currentCat = 'ALL';
+        let isEditMode = false;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let modalCallback = null;
+        let modalDeleteCallback = null;
+
+        // --- Firebase Auth & Sync ---
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth Error", err);
+            }
+        };
+
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (user) {
+                // 开始监听 Firestore 数据
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'state');
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        habits = data.habits || [];
+                        categories = data.categories || categories;
+                    } else {
+                        // 首次运行，初始化云端数据
+                        syncToCloud();
+                    }
+                    hideLoading();
+                    refreshUI();
+                }, (error) => {
+                    console.error("Snapshot error:", error);
+                    hideLoading();
+                });
+            }
+        });
+
+        async function syncToCloud() {
+            if (!user) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'state');
+            await setDoc(docRef, {
+                habits: habits,
+                categories: categories,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+
+        function hideLoading() {
+            const loader = document.getElementById('loading-overlay');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+        }
+
+        // --- Core Logic ---
+        function refreshUI() {
+            updateStaticText();
+            renderTabs();
+            renderHabits();
+            updateStats();
+        }
+
+        function getCatName(catId) {
+            const cat = categories.find(c => c.id === catId);
+            const t = i18n[currentLang].builtInCats;
+            return t[catId] || (cat ? cat.name : 'Unknown');
+        }
 
         function playFeedbackSound() {
             if (currentSound === 'none') return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            osc.connect(gain); gain.connect(audioCtx.destination);
             const now = audioCtx.currentTime;
-            if (currentSound === 'crystal') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, now);
-                osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(); osc.stop(now + 0.1);
-            } else if (currentSound === 'wooden') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(100, now + 0.05);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.linearRampToValueAtTime(0, now + 0.05);
-                osc.start(); osc.stop(now + 0.05);
-            } else if (currentSound === 'bubble') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-                osc.start(); osc.stop(now + 0.05);
-            }
+            osc.frequency.setValueAtTime(currentSound === 'crystal' ? 880 : currentSound === 'wooden' ? 300 : 600, now);
+            gain.gain.setValueAtTime(0.1, now);
+            osc.start(); osc.stop(now + 0.1);
             if (window.navigator.vibrate) window.navigator.vibrate(10);
-        }
-
-        // --- State Management ---
-        let currentLang = localStorage.getItem('app_lang') || 'zh';
-        let categories = JSON.parse(localStorage.getItem('habits_categories_v9')) || [{ id: '1', name: '日常' }, { id: '2', name: '个人' }];
-        let habits = JSON.parse(localStorage.getItem('habits_v9')) || [
-            { id: 1001, name: "晨间拉伸", category: "日常", freq: "daily", subtasks: ["颈部舒缓"], history: {} }
-        ];
-        let currentCat = '全部';
-        const todayStr = new Date().toISOString().split('T')[0];
-        let modalCallback = null;
-
-        // --- Core Functions ---
-        function refresh() {
-            updateStaticText();
-            renderTabs();
-            renderHabits();
-            updateStats();
-            localStorage.setItem('habits_categories_v9', JSON.stringify(categories));
-            localStorage.setItem('habits_v9', JSON.stringify(habits));
-            localStorage.setItem('app_lang', currentLang);
-            localStorage.setItem('app_sound_v2', currentSound);
         }
 
         function updateStaticText() {
@@ -234,42 +322,43 @@
             document.getElementById('unit-achieved').innerText = t.achieved;
             document.getElementById('modal-cancel').innerText = t.cancel;
             document.getElementById('modal-confirm').innerText = t.confirm;
-            document.getElementById('today-date').innerText = new Date().toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', weekday: 'short' });
-        }
+            document.getElementById('label-cat-select').innerText = t.catLabel;
+            document.getElementById('label-freq-select').innerText = t.freqLabel;
+            document.getElementById('label-sound-style').innerText = t.soundLabel;
+            document.getElementById('modal-input').placeholder = t.inputPlaceholder;
 
-        function isHabitDueToday(habit) {
-            const day = new Date().getDay();
-            if (habit.freq === 'workday') return day >= 1 && day <= 5;
-            if (habit.freq === 'weekend') return day === 0 || day === 6;
-            return true;
+            document.getElementById('today-date').innerText = new Date().toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+
+            const freqSelect = document.getElementById('modal-freq');
+            freqSelect.innerHTML = Object.entries(t.freqOptions).map(([val, label]) => `<option value="${val}">${label}</option>`).join('');
         }
 
         function updateStats() {
             const historyDates = new Set();
             let todayDone = 0;
-            const dueToday = habits.filter(isHabitDueToday);
             habits.forEach(h => {
-                Object.keys(h.history).forEach(d => {
-                    if(h.history[d].allDone) historyDates.add(d);
-                    if(d === todayStr && h.history[d].allDone) todayDone++;
-                });
+                Object.keys(h.history || {}).forEach(d => { if(h.history[d].allDone) historyDates.add(d); });
+                if(h.history?.[todayStr]?.allDone) todayDone++;
             });
-            let streak = 0;
-            let checkDate = new Date();
-            while(true) {
-                const k = checkDate.toISOString().split('T')[0];
-                if(historyDates.has(k)) { streak++; checkDate.setDate(checkDate.getDate() - 1); }
-                else { if(k === todayStr && streak === 0) { checkDate.setDate(checkDate.getDate() - 1); continue; } break; }
-            }
+            const dueTodayCount = habits.filter(h => {
+                const day = new Date().getDay();
+                if (h.freq === 'workday') return day >= 1 && day <= 5;
+                if (h.freq === 'weekend') return day === 0 || day === 6;
+                return true;
+            }).length;
+
             document.getElementById('stat-total').innerText = todayDone;
-            document.getElementById('stat-goal').innerText = dueToday.length;
+            document.getElementById('stat-goal').innerText = dueTodayCount;
+            document.getElementById('progress-bar').style.width = `${dueTodayCount ? (todayDone/dueTodayCount)*100 : 0}%`;
+
+            let streak = 0; let d = new Date();
+            while(historyDates.has(d.toISOString().split('T')[0])) { streak++; d.setDate(d.getDate()-1); }
             document.getElementById('stat-streak').innerText = streak;
-            document.getElementById('progress-bar').style.width = `${dueToday.length ? (todayDone/dueToday.length)*100 : 0}%`;
-            const wv = document.getElementById('week-view');
-            wv.innerHTML = '';
+
+            const wv = document.getElementById('week-view'); wv.innerHTML = '';
             for(let i=6; i>=0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                const k = d.toISOString().split('T')[0];
+                const checkD = new Date(); checkD.setDate(checkD.getDate()-i);
+                const k = checkD.toISOString().split('T')[0];
                 wv.innerHTML += `<div class="day-box ${historyDates.has(k) ? 'completed' : ''}"></div>`;
             }
         }
@@ -277,208 +366,202 @@
         function renderTabs() {
             const nav = document.getElementById('category-tabs');
             nav.innerHTML = '';
-            const createTab = (id, label) => {
+            const t = i18n[currentLang];
+
+            const createTab = (id, label, isSystem = false) => {
                 const b = document.createElement('button');
-                b.className = `pb-1 text-[10px] font-black uppercase tracking-widest btn-press transition-all whitespace-nowrap ${currentCat === id ? 'tab-active' : 'text-slate-300'}`;
+                b.className = `cat-item pb-1 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${currentCat === id ? 'tab-active' : 'text-slate-300'}`;
+                if (isEditMode && !isSystem) b.classList.add('editing-shake', 'text-indigo-400');
                 b.innerText = label;
-                b.onclick = () => { currentCat = id; refresh(); };
+
+                b.onclick = () => {
+                    if (isEditMode && !isSystem) {
+                        openModal(t.editMode, label, (newName) => {
+                            if(newName) {
+                                const target = categories.find(c => c.id === id);
+                                if(target) target.name = newName;
+                                syncToCloud();
+                            }
+                        }, 'text', '', '', () => {
+                            categories = categories.filter(c => c.id !== id);
+                            habits.forEach(h => { if(h.category === id) h.category = categories[0].id; });
+                            if(currentCat === id) currentCat = 'ALL';
+                            syncToCloud();
+                        });
+                    } else {
+                        currentCat = id; refreshUI();
+                    }
+                };
                 return b;
             };
-            nav.appendChild(createTab('全部', i18n[currentLang].allSystems));
-            categories.forEach(c => nav.appendChild(createTab(c.name, c.name)));
+
+            nav.appendChild(createTab('ALL', t.allSystems, true));
+            categories.forEach(c => nav.appendChild(createTab(c.id, getCatName(c.id))));
         }
 
         function renderHabits() {
             const container = document.getElementById('habits-container');
             container.innerHTML = '';
-            let filtered = habits.filter(isHabitDueToday);
-            if(currentCat !== '全部') filtered = filtered.filter(h => h.category === currentCat);
+            const t = i18n[currentLang];
+
+            let filtered = habits.filter(h => {
+                const day = new Date().getDay();
+                if (h.freq === 'workday') return day >= 1 && day <= 5;
+                if (h.freq === 'weekend') return day === 0 || day === 6;
+                return true;
+            });
+            if(currentCat !== 'ALL') filtered = filtered.filter(h => h.category === currentCat);
 
             filtered.forEach(habit => {
-                const dayState = habit.history[todayStr] || { allDone: false, subtasks: [] };
+                const dayState = habit.history?.[todayStr] || { allDone: false, subtasks: [] };
+
                 const card = document.createElement('div');
                 card.className = 'glass rounded-[2.5rem] p-6 shadow-sm border border-white/50 relative overflow-hidden group';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex-1 pr-4">
-                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${habit.category}</span>
-                            <h4 class="font-bold text-slate-800 text-lg leading-tight transition-all ${dayState.allDone ? 'opacity-30 line-through' : ''}">${habit.name}</h4>
+                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${getCatName(habit.category)}</span>
+                            <h4 class="font-bold text-slate-800 text-lg leading-tight ${dayState.allDone ? 'opacity-30 line-through' : ''}">${habit.name}</h4>
                         </div>
                         <div class="flex gap-2">
-                            <button class="edit-habit p-3 bg-slate-50 text-slate-300 hover:text-indigo-400 rounded-2xl transition-all btn-press">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                            </button>
-                            <button class="main-check w-12 h-12 rounded-2xl flex items-center justify-center transition-all btn-press ${dayState.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
+                            <button class="edit-habit p-3 bg-slate-50 text-slate-300 rounded-2xl btn-press"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                            <button class="main-check w-12 h-12 rounded-2xl flex items-center justify-center btn-press ${dayState.allDone ? 'btn-check-active text-white' : 'bg-slate-50 text-slate-200'}">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                             </button>
                         </div>
                     </div>
-                    <div class="space-y-2 subtask-list" data-habit-id="${habit.id}">
-                        ${habit.subtasks.map((st, i) => `
-                            <div class="flex items-center gap-3 p-1 rounded-lg group/item bg-transparent" data-idx="${i}">
-                                <div class="drag-handle text-slate-200 group-hover/item:text-slate-400 transition-colors">
-                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
-                                </div>
-                                <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0 transition-all" data-idx="${i}" ${dayState.subtasks.includes(i) ? 'checked' : ''}>
-                                <span class="text-sm font-semibold transition-all flex-1 ${dayState.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
+                    <div class="space-y-2 subtask-list">
+                        ${(habit.subtasks || []).map((st, i) => `
+                            <div class="flex items-center gap-3 p-1 group/item">
+                                <div class="drag-handle text-slate-200 cursor-grab"><svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg></div>
+                                <input type="checkbox" class="sub-check w-5 h-5 rounded-lg border-2 border-slate-100 text-indigo-600 focus:ring-0" data-idx="${i}" ${dayState.subtasks.includes(i) ? 'checked' : ''}>
+                                <span class="text-sm font-semibold flex-1 ${dayState.subtasks.includes(i) ? 'task-done' : 'text-slate-600'}">${st}</span>
                             </div>
                         `).join('')}
                     </div>
                     <div class="mt-5 pt-4 border-t border-slate-50/50 flex justify-between items-center">
-                        <button class="del-habit p-2 text-slate-200 hover:text-red-400 transition-colors">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                        <button class="add-sub text-[9px] font-black text-indigo-400 hover:text-indigo-600 uppercase tracking-widest transition-colors">+ Add Subtask</button>
+                        <button class="del-habit p-2 text-slate-200 hover:text-red-400"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                        <button class="add-sub text-[9px] font-black text-indigo-400 uppercase tracking-widest">${t.addSub}</button>
                     </div>
                 `;
 
-                // Subtask Sortable
                 const subList = card.querySelector('.subtask-list');
-                new Sortable(subList, {
-                    animation: 150,
-                    handle: '.drag-handle',
-                    ghostClass: 'sortable-ghost',
-                    onEnd: (evt) => {
-                        const hId = parseInt(subList.dataset.habitId);
-                        const h = habits.find(x => x.id === hId);
-                        const item = h.subtasks.splice(evt.oldIndex, 1)[0];
-                        h.subtasks.splice(evt.newIndex, 0, item);
-                        // History indices need to be reset or cleared when reordering for consistency
-                        if(h.history[todayStr]) h.history[todayStr].subtasks = [];
-                        refresh();
-                    }
-                });
+                new Sortable(subList, { handle: '.drag-handle', animation: 150, onEnd: (evt) => {
+                    const item = habit.subtasks.splice(evt.oldIndex, 1)[0];
+                    habit.subtasks.splice(evt.newIndex, 0, item);
+                    if(habit.history[todayStr]) habit.history[todayStr].subtasks = [];
+                    syncToCloud();
+                }});
 
-                // Events
                 card.querySelector('.main-check').onclick = () => {
+                    if (!habit.history) habit.history = {};
                     if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
                     const d = habit.history[todayStr];
-                    if(d.allDone) { delete habit.history[todayStr]; }
-                    else { d.allDone = true; d.subtasks = habit.subtasks.map((_, i) => i); playFeedbackSound(); confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 }, colors: ['#6366f1'] }); }
-                    refresh();
+                    if(d.allDone) delete habit.history[todayStr];
+                    else {
+                        d.allDone = true;
+                        d.subtasks = habit.subtasks.map((_, i) => i);
+                        playFeedbackSound();
+                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 } });
+                    }
+                    syncToCloud();
                 };
 
                 card.querySelectorAll('.sub-check').forEach(cb => {
                     cb.onclick = () => {
+                        if (!habit.history) habit.history = {};
                         if (!habit.history[todayStr]) habit.history[todayStr] = { allDone: false, subtasks: [] };
-                        const d = habit.history[todayStr];
-                        const idx = parseInt(cb.dataset.idx);
+                        const d = habit.history[todayStr]; const idx = parseInt(cb.dataset.idx);
                         const pos = d.subtasks.indexOf(idx);
-                        if(pos > -1) d.subtasks.splice(pos, 1);
-                        else { d.subtasks.push(idx); playFeedbackSound(); }
-                        const wasAllDone = d.allDone;
+                        if(pos > -1) d.subtasks.splice(pos, 1); else d.subtasks.push(idx);
                         d.allDone = habit.subtasks.length > 0 && d.subtasks.length === habit.subtasks.length;
-                        if(d.allDone && !wasAllDone) { playFeedbackSound(); confetti({ particleCount: 80, spread: 50 }); }
-                        refresh();
+                        if(d.allDone) { playFeedbackSound(); confetti({ particleCount: 80 }); }
+                        syncToCloud();
                     };
                 });
 
-                card.querySelector('.add-sub').onclick = () => {
-                    openModal('拆解子任务', "", (txt) => { if(txt) { habit.subtasks.push(txt); refresh(); } });
-                };
-
-                card.querySelector('.edit-habit').onclick = () => {
-                    openModal('编辑卡片', habit.name, (name, cat, freq) => {
-                        habit.name = name;
-                        habit.category = cat;
-                        habit.freq = freq;
-                        refresh();
-                    }, 'habit', habit.category, habit.freq);
-                };
-
-                card.querySelector('.del-habit').onclick = () => {
-                    habits = habits.filter(h => h.id !== habit.id);
-                    refresh();
-                };
+                card.querySelector('.add-sub').onclick = () => openModal(t.addSub, "", (txt) => { if(txt){habit.subtasks.push(txt); syncToCloud();} });
+                card.querySelector('.edit-habit').onclick = () => openModal(t.editHabit, habit.name, (n, c, f) => { habit.name=n; habit.category=c; habit.freq=f; syncToCloud(); }, 'habit', habit.category, habit.freq);
+                card.querySelector('.del-habit').onclick = () => { habits = habits.filter(h => h.id !== habit.id); syncToCloud(); };
 
                 container.appendChild(card);
             });
         }
 
-        // --- UI Modals ---
-        function openModal(title, val, cb, type='text', catVal='', freqVal='daily') {
-            modalCallback = cb;
+        // --- Modal System ---
+        function openModal(title, val, cb, type='text', catVal='', freqVal='daily', delCb = null) {
+            modalCallback = cb; modalDeleteCallback = delCb;
+            const t = i18n[currentLang];
             document.getElementById('modal-title').innerText = title;
             document.getElementById('ui-modal').classList.replace('hidden', 'flex');
+            ['modal-input', 'modal-habit-extras', 'settings-extras', 'modal-extra-actions'].forEach(s => document.getElementById(s).classList.add('hidden'));
 
-            const sections = ['modal-input', 'modal-habit-extras', 'settings-extras'];
-            sections.forEach(s => document.getElementById(s).classList.add('hidden'));
+            if (delCb) document.getElementById('modal-extra-actions').classList.remove('hidden');
 
             if(type === 'habit') {
-                document.getElementById('modal-input').classList.remove('hidden');
-                document.getElementById('modal-input').value = val;
+                document.getElementById('modal-input').classList.remove('hidden'); document.getElementById('modal-input').value = val;
                 document.getElementById('modal-habit-extras').classList.remove('hidden');
-                document.getElementById('modal-select').innerHTML = categories.map(c => `<option value="${c.name}" ${c.name === catVal ? 'selected' : ''}>${c.name}</option>`).join('');
+                document.getElementById('modal-select').innerHTML = categories.map(c => `<option value="${c.id}" ${c.id === catVal ? 'selected' : ''}>${getCatName(c.id)}</option>`).join('');
                 document.getElementById('modal-freq').value = freqVal;
             } else if(type === 'settings') {
                 document.getElementById('settings-extras').classList.remove('hidden');
-                document.getElementById('modal-input').classList.add('hidden');
-                document.getElementById('modal-textarea').value = JSON.stringify({categories, habits}, null, 2);
-                updateSoundUI();
             } else {
-                document.getElementById('modal-input').classList.remove('hidden');
-                document.getElementById('modal-input').value = val;
+                document.getElementById('modal-input').classList.remove('hidden'); document.getElementById('modal-input').value = val;
             }
-
-            setTimeout(() => {
-                const content = document.getElementById('modal-content');
-                content.classList.replace('scale-95', 'scale-100');
-                content.classList.replace('opacity-0', 'opacity-100');
-            }, 10);
+            setTimeout(() => { document.getElementById('modal-content').classList.replace('scale-95', 'scale-100'); document.getElementById('modal-content').classList.replace('opacity-0', 'opacity-100'); }, 10);
         }
 
         function closeModal() {
-            const content = document.getElementById('modal-content');
-            content.classList.replace('scale-100', 'scale-95');
-            content.classList.replace('opacity-100', 'opacity-0');
+            document.getElementById('modal-content').classList.replace('scale-100', 'scale-95');
+            document.getElementById('modal-content').classList.replace('opacity-100', 'opacity-0');
             setTimeout(() => document.getElementById('ui-modal').classList.replace('flex', 'hidden'), 200);
         }
 
-        function updateSoundUI() {
-            document.querySelectorAll('.sound-btn').forEach(btn => {
-                if(btn.dataset.sound === currentSound) {
-                    btn.classList.add('border-indigo-600', 'text-indigo-600', 'bg-indigo-50');
-                } else {
-                    btn.classList.remove('border-indigo-600', 'text-indigo-600', 'bg-indigo-50');
-                }
-            });
-        }
-
         // --- Event Listeners ---
-        document.querySelectorAll('.sound-btn').forEach(btn => {
-            btn.onclick = () => { currentSound = btn.dataset.sound; updateSoundUI(); playFeedbackSound(); };
-        });
+        document.getElementById('lang-toggle').onclick = () => {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('app_lang', currentLang);
+            refreshUI();
+        };
+
+        document.getElementById('edit-mode-toggle').onclick = () => {
+            isEditMode = !isEditMode;
+            document.getElementById('edit-mode-toggle').classList.toggle('text-indigo-600', isEditMode);
+            renderTabs();
+        };
 
         document.getElementById('modal-confirm').onclick = () => {
-            const inputVal = document.getElementById('modal-input').value;
-            const catVal = document.getElementById('modal-select').value;
-            const freqVal = document.getElementById('modal-freq').value;
-            const rawData = document.getElementById('modal-textarea').value;
-
-            if(!document.getElementById('settings-extras').classList.contains('hidden')) {
-                try {
-                    const parsed = JSON.parse(rawData);
-                    habits = parsed.habits;
-                    categories = parsed.categories;
-                } catch(e) {}
-                refresh();
-            } else if(!document.getElementById('modal-habit-extras').classList.contains('hidden')) {
-                modalCallback(inputVal, catVal, freqVal);
-            } else {
-                modalCallback(inputVal);
+            const val = document.getElementById('modal-input').value;
+            if(!document.getElementById('modal-habit-extras').classList.contains('hidden')) {
+                modalCallback(val, document.getElementById('modal-select').value, document.getElementById('modal-freq').value);
+            } else if (modalCallback) {
+                modalCallback(val);
             }
             closeModal();
         };
 
+        document.getElementById('modal-delete').onclick = () => { if(modalDeleteCallback) modalDeleteCallback(); closeModal(); };
         document.getElementById('modal-cancel').onclick = closeModal;
-        document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; refresh(); };
-        document.getElementById('btn-settings').onclick = () => openModal('系统设置', "", null, 'settings');
-        document.getElementById('add-cat-trigger').onclick = () => openModal('新分类', "", (n) => { if(n){categories.push({id:Date.now().toString(),name:n}); refresh();} });
-        document.getElementById('main-add-btn').onclick = () => openModal('构建新秩序', "", (n,c,f) => {
-            if(n) { habits.push({ id: Date.now(), name: n, category: c, freq: f, subtasks: [], history: {} }); refresh(); }
-        }, 'habit');
+        document.getElementById('btn-settings').onclick = () => openModal(i18n[currentLang].settings, "", null, 'settings');
 
-        refresh();
+        document.getElementById('add-cat-trigger').onclick = () => openModal(i18n[currentLang].addCat, "", (n) => {
+            if(n){categories.push({id: 'cat_' + Date.now(), name: n}); syncToCloud();}
+        });
+
+        document.getElementById('main-add-btn').onclick = () => openModal(i18n[currentLang].addHabit, "", (n,c,f) => {
+            if(n) { habits.push({ id: Date.now(), name: n, category: c, freq: f, subtasks: [], history: {} }); syncToCloud(); }
+        }, 'habit', categories[0]?.id || 'daily');
+
+        document.querySelectorAll('.sound-btn').forEach(btn => {
+            btn.onclick = () => {
+                currentSound = btn.dataset.sound;
+                localStorage.setItem('app_sound_v2', currentSound);
+                playFeedbackSound();
+            };
+        });
+
+        // Start Auth
+        initAuth();
     </script>
 </body>
 </html>
