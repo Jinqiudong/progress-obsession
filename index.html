@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Progress Obsession - Local</title>
+    <title>Progress Obsession</title>
+    <!-- 引入样式和功能库：Tailwind (CSS), Confetti (纸屑特效), Sortable (拖拽排序) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
+        /* 字体与自定义动画样式 */
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; -webkit-tap-highlight-color: transparent; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
@@ -18,50 +20,83 @@
         .tab-active { color: #6366f1; transform: scale(1.1); }
         .task-done { text-decoration: line-through; opacity: 0.4; }
         .mode-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
+        /* 习惯完成度准备好的呼吸效果 */
         .ready-to-check { animation: pulse-purple 2s infinite; border: 2px solid #6366f1 !important; transform: scale(1.05); }
-        @keyframes pulse-purple { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
+        @keyframes pulse-purple {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
         .emoji-btn.selected { background-color: #6366f1; color: white; transform: scale(1.1); }
     </style>
 </head>
 <body class="min-h-screen pb-32">
 
-    <!-- 加载遮罩层 -->
+    <!-- 全屏加载遮罩层 -->
     <div id="loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
         <div class="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
     </div>
 
     <div id="app" class="max-w-md mx-auto px-6 pt-10">
-        <!-- 主页面 -->
+        <!-- 页面 1：习惯打卡页 -->
         <section id="page-checkin" class="page-content page-active">
             <header class="flex justify-between items-center mb-6">
                 <div>
                     <h1 class="text-3xl font-black tracking-tighter italic text-slate-800" id="ui-title">Focus.</h1>
                     <p id="current-date" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1"></p>
                 </div>
+                <!-- 添加新习惯按钮 -->
                 <button id="add-habit-btn" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-transform">
                     <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
                 </button>
             </header>
+            <!-- 分类切换栏 -->
             <div class="flex gap-3 mb-6 overflow-x-auto no-scrollbar items-center py-2" id="category-bar"></div>
+            <!-- 习惯列表容器 -->
             <div id="habits-container" class="space-y-6"></div>
         </section>
 
-        <!-- 统计页面 -->
-        <section id="page-insight" class="page-content py-10 text-center">
-            <h2 class="text-xl font-black mb-8 italic text-left">Analytics.</h2>
-            <div class="glass p-10 rounded-[2.5rem] text-slate-400 font-bold text-sm">本地数据统计即将上线...</div>
+        <!-- 页面 2：分析数据 (NEW Content) -->
+        <section id="page-insight" class="page-content py-10">
+            <h2 class="text-xl font-black mb-8 italic text-left" id="ui-insight-title">Analytics.</h2>
+
+            <!-- 核心数据指标 -->
+            <div class="grid grid-cols-3 gap-3 mb-8" id="stats-grid">
+                <!-- 由 JS 填充 -->
+            </div>
+
+            <!-- 热力趋势 -->
+            <div class="glass p-6 rounded-[2.5rem] mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">7日趋势 / Activity</p>
+                    <span id="completion-rate" class="text-[10px] font-black text-indigo-600">--%</span>
+                </div>
+                <div class="grid grid-cols-7 gap-2" id="activity-heatmap">
+                    <!-- 由 JS 填充 -->
+                </div>
+            </div>
+
+            <!-- 分类分析 -->
+            <div class="glass p-6 rounded-[2.5rem]">
+                <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-6">习惯分布 / Distribution</p>
+                <div id="category-stats" class="space-y-4">
+                    <!-- 由 JS 填充 -->
+                </div>
+            </div>
         </section>
 
-        <!-- 配置页面 -->
+        <!-- 页面 3：配置/设置页 -->
         <section id="page-config" class="page-content py-10">
             <h2 class="text-xl font-black mb-8 italic" id="ui-config-title">Config.</h2>
             <div class="space-y-4">
+                <!-- 音效设置 -->
                 <div class="glass p-6 rounded-[2rem] flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-sound">音效开关</span>
                     <button id="btn-sound" class="w-12 h-6 bg-slate-200 rounded-full relative transition-colors">
                         <div id="sound-knob" class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform"></div>
                     </button>
                 </div>
+                <!-- 语言设置 -->
                 <div class="glass p-6 rounded-[2rem] flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="ui-lang">语言设置</span>
                     <select id="select-lang" class="bg-transparent text-xs font-black outline-none border-none text-right appearance-none">
@@ -69,6 +104,7 @@
                         <option value="en">English</option>
                     </select>
                 </div>
+                <!-- 数据备份按钮 -->
                 <div class="grid grid-cols-2 gap-4 mt-6">
                     <button onclick="window.exportData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-slate-400 tracking-widest">导出 JSON</button>
                     <button onclick="window.importData()" class="glass p-5 rounded-[1.5rem] text-[10px] font-black uppercase text-indigo-600 tracking-widest">导入 JSON</button>
@@ -91,7 +127,7 @@
         </button>
     </nav>
 
-    <!-- 弹窗系统 -->
+    <!-- 弹窗模态框 -->
     <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto relative no-scrollbar">
             <h3 class="text-xl font-black mb-6 italic" id="modal-title">设置.</h3>
@@ -100,26 +136,38 @@
                 <button id="modal-cancel" class="flex-1 py-4 font-bold text-slate-300 text-[10px] uppercase tracking-widest text-center">取消</button>
                 <button id="modal-ok" class="flex-[2] bg-indigo-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">确定</button>
             </div>
+            <!-- 隐藏的删除习惯按钮 -->
             <button id="modal-delete-sec" class="hidden absolute top-8 right-8 text-red-400 p-2"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
         </div>
     </div>
 
-    <script>
-        /**
-         * Firebase 相关依赖已全部移除/注释
-         * 当前版本使用 localStorage 进行纯本地数据持久化
-         */
+    <script type="module">
+        // 核心导入：Firebase 身份验证与数据库
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- 状态管理 ---
-        let habits = [];
-        let categories = [{ id: 'daily', name: 'Daily' }, { id: 'work', name: 'Work' }];
-        let activeCat = 'ALL';
-        let config = { sound: true, lang: 'zh' };
-        let timerInterval = null;
+        // --- Firebase 环境初始化 ---
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'progress-obs-pro';
 
+        // --- 全局应用状态 ---
+        let habits = []; // 所有的习惯列表
+        let categories = [{ id: 'daily', name: 'Daily' }, { id: 'work', name: 'Work' }]; // 所有的分类
+        let activeCat = 'ALL'; // 当前选中的分类 ID
+        let config = { sound: true, lang: 'zh' }; // 应用基础配置
+        let timerInterval = null; // 全局计时器指针
+        let currentUser = null; // 当前登录的用户
+
+        // 获取当前日期 Key（作为习惯历史记录的键值）
         const getTodayKey = () => new Date().toISOString().split('T')[0];
-        const EMOJI_LIST = ['🎾', '🏊', '🏂', '⛷️', '🏹', '🏋️', '🥊', '⛸️', '⛳️', '🏸', '🪥', '💇', '🧹', '🧴', '💆', '🚰', '💊', '🐈', '🥢', '🎨', '✍️', '🧶', '🦷', '🧑‍💻', '👩‍💻', '🧑‍🍳', '👩‍🍳', '💃', '🕺', '🏄', '🚣', '🚴', '💬', '🤸', '😌', '🤺', '🧗', '🔫', '🏃', '📚', '🧘', '💧', '🍎', '💪', '💻', '🎹', '🌱', '🍵', '💤', '✨', '🔥', '🧠', '☕️', '⏰'];
+        // 备选图标库
+        const EMOJI_LIST = ['🎾', '🏊', '🏂', '⛷️', '🏹', '🏋️', '🥊', '⛸️', '⛳️', '🏸', '🪥', '💇', '🧹', '🧴', '💆', '🚰', '💊', '🐈', '🥢', '🎨', '✍️', '🧶', '🦷', '🧑‍💻', '👩‍💻', '🧑‍🍳', '👩‍🍳', '💃', '🕺', '🏄', '🚣', '🚴', '💬', '🤸', '😌', '🤺', '攀', '枪', '🏃', '📚', '🧘', '💧', '🍎', '💪', '💻', '🎹', '🌱', '🍵', '💤', '✨', '🔥', '🧠', '☕️', '⏰'];
 
+        // --- 国际化文本定义 ---
         const I18N = {
             zh: {
                 title: '专注.', config: '配置.', sound: '音效开关', lang: '语言设置', add: '新建习惯',
@@ -135,39 +183,53 @@
             }
         };
 
-        // --- 数据持久化 (仅本地) ---
-        function loadData() {
-            // 尝试从本地存储读取数据
-            const stored = localStorage.getItem('progress_obs_data');
-            if (stored) {
-                try {
-                    const d = JSON.parse(stored);
-                    habits = d.habits || [];
-                    categories = d.categories || categories;
-                    config = { ...config, ...(d.config || {}) };
-                } catch (e) {
-                    console.error("解析本地存储失败", e);
-                }
+        // --- 用户认证与云端实时同步 ---
+        const initAuth = async () => {
+            // 如果环境提供了 Token 则用 Token 登录，否则使用匿名登录
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
-            finishLoading();
+        };
+
+        // 监听登录状态变化
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                // 设置实时监听 Firestore 中的用户文档
+                onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'main'), (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        // 同步云端数据到内存
+                        habits = data.habits || [];
+                        categories = data.categories || categories;
+                        config = { ...config, ...(data.config || {}) };
+                    }
+                    finishLoading();
+                }, (err) => {
+                    console.error("Firestore 监听错误:", err);
+                    finishLoading();
+                });
+            }
+        });
+
+        // 核心同步函数：将内存中的所有数据写入 Firestore
+        async function sync() {
+            if (!currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'main'), {
+                    habits, categories, config
+                });
+            } catch (e) {
+                console.error("同步失败:", e);
+            }
         }
 
-        function sync() {
-            // 同步数据到本地存储
-            const data = { habits, categories, config };
-            localStorage.setItem('progress_obs_data', JSON.stringify(data));
-
-            /* Firebase 同步代码 (已注释)
-            if (user && db) {
-                setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'store'), data);
-            }
-            */
-        }
-
+        // 隐藏加载页并渲染 UI
         function finishLoading() {
             applyConfig();
             render();
-            // 隐藏加载动画
             const loader = document.getElementById('loading');
             if (loader) {
                 loader.style.opacity = '0';
@@ -175,7 +237,9 @@
             }
         }
 
-        // --- UI 渲染逻辑 ---
+        // --- UI 更新逻辑 ---
+
+        // 更新页面静态文本（基于当前语言配置）
         function applyConfig() {
             const L = I18N[config.lang];
             document.getElementById('ui-title').innerText = L.title;
@@ -189,32 +253,42 @@
             document.getElementById('sound-knob').style.transform = config.sound ? 'translateX(24px)' : 'translateX(0px)';
         }
 
+        // 获取分类的显示名称（如果是系统默认分类则翻译）
         function getCategoryDisplayName(cat) {
             const L = I18N[config.lang];
             if (cat.id === 'daily' || cat.id === 'work') return L.cats[cat.id];
             return cat.name;
         }
 
+        // 主渲染函数：刷新页面上的分类条和习惯卡片
         function render() {
             const L = I18N[config.lang];
-            document.getElementById('current-date').innerText = new Date().toLocaleDateString(config.lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            const dateEl = document.getElementById('current-date');
+            if (dateEl) dateEl.innerText = new Date().toLocaleDateString(config.lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
+            // 渲染分类筛选条
             const catBar = document.getElementById('category-bar');
             catBar.innerHTML = `<button onclick="window.setCat('ALL')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 ${activeCat==='ALL'?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${L.all}</button>` +
                 categories.map(c => `<button oncontextmenu="event.preventDefault(); window.editCategory('${c.id}')" onclick="window.setCat('${c.id}')" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all flex-shrink-0 whitespace-nowrap ${activeCat===c.id?'bg-indigo-600 text-white shadow-md':'bg-white text-slate-300'}">${getCategoryDisplayName(c)}</button>`).join('') +
                 `<button onclick="window.addCategory()" class="w-9 h-9 rounded-full bg-white text-indigo-400 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-sm">+</button>`;
 
+            // 过滤并渲染习惯卡片
             const filtered = activeCat === 'ALL' ? habits : habits.filter(h => h.cat === activeCat);
             document.getElementById('habits-container').innerHTML = filtered.length ? filtered.map(h => renderHabitCard(h)).join('') : `<div class="py-20 text-center opacity-20 font-bold text-sm">还没有习惯，点击右上角开始。</div>`;
+
+            // 初始化排序功能
             initSortable();
         }
 
+        // 单个习惯卡片的 HTML 生成逻辑
         function renderHabitCard(h) {
             const today = getTodayKey();
             const hist = h.history?.[today] || { done: false, subData: {}, subDone: [] };
             const { totalVal, totalTime } = getHabitStats(h);
             const icon = h.emoji || '✨';
-            const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => hist.subDone?.includes(i));
+
+            // 判断是否准备好打卡：如果存在步骤，必须所有步骤完成
+            const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => (hist.subDone || []).includes(i));
             const isReady = h.steps?.length > 0 ? (allSubDone && !hist.done) : !hist.done;
             const categoryObj = categories.find(c => c.id === h.cat) || { id: h.cat, name: h.cat };
 
@@ -234,27 +308,32 @@
                         <button onclick="window.editHabitDetails(${h.id})" class="p-2 text-slate-300"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                     </div>
                     ${h.type !== 'check' ? `<div class="mb-5 bg-slate-50/50 rounded-2xl p-4 flex items-center gap-4"><div class="flex-1"><p class="text-[9px] font-black uppercase text-slate-400 tracking-wider">今日进度</p><p class="text-xl font-black text-indigo-600 font-mono">${h.type === 'timer' ? formatTime(totalTime) : totalVal + ' ' + (h.unit||'min')}</p></div></div>` : ''}
+                    <!-- 子任务/步骤列表 -->
                     <div class="space-y-3 mb-6 sub-tasks" data-id="${h.id}">
                         ${(h.steps || []).map((step, idx) => {
-                            const subHist = hist.subData?.[idx] || { val: 0, timer: 0 };
-                            const done = hist.subDone?.includes(idx);
+                            const subHist = (hist.subData || {})[idx] || { val: 0, timer: 0 };
+                            const done = (hist.subDone || []).includes(idx);
                             return `
                             <div class="subtask-row flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-slate-50">
                                 <span class="drag-handle opacity-20 text-[10px] cursor-grab">⋮⋮</span>
                                 <input type="checkbox" ${done?'checked':''} onchange="window.toggleSubDone(${h.id}, ${idx})" class="w-5 h-5 rounded-md border-2 border-slate-100 appearance-none checked:bg-indigo-600 transition-all">
                                 <span class="text-sm font-bold flex-1 truncate ${done?'task-done text-slate-300':''}">${step}</span>
                                 <div class="flex items-center gap-2">
+                                    <!-- 计时器逻辑 -->
                                     ${h.type === 'timer' ? `<span class="text-[10px] font-mono font-bold text-orange-600">${formatTime(subHist.timer || 0)}</span><button onclick="window.toggleSubTimer(${h.id}, ${idx})" class="p-1.5 rounded-lg bg-orange-50 text-orange-600"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">${subHist.running ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' : '<path d="M8 5v14l11-7z"/>'}</svg></button>` : ''}
+                                    <!-- 数值输入逻辑 -->
                                     ${h.type === 'input' ? `<input type="number" value="${subHist.val||''}" onchange="window.updateSubVal(${h.id}, ${idx}, this.value)" placeholder="0" class="w-12 bg-blue-50/50 rounded-lg px-2 py-1 text-[10px] font-bold outline-none text-blue-600 text-right">` : ''}
                                     <button onclick="window.removeStep(${h.id}, ${idx})" class="text-slate-200 ml-1"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
                                 </div>
                             </div>`;
                         }).join('')}
                     </div>
+                    <!-- 底部操作栏 -->
                     <div class="pt-5 border-t border-slate-50 flex justify-between items-center">
                         <button onclick="window.confirmDeleteHabit(${h.id})" class="p-2 text-slate-200 hover:text-red-400 active:scale-90 transition-transform"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                         <div class="flex items-center gap-4">
                             <button onclick="window.promptSubtask(${h.id})" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-[9px] font-black uppercase text-slate-500 active:bg-indigo-50">添加步骤</button>
+                            <!-- 最终打卡按钮 -->
                             <button onclick="window.toggleHabit(${h.id})" class="h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${hist.done?'bg-green-500 text-white shadow-xl shadow-green-100 scale-110': (isReady ? 'ready-to-check bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-300')}">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                             </button>
@@ -264,9 +343,12 @@
             `;
         }
 
-        // --- 事件处理函数 ---
+        // --- 全局交互函数 (挂载到 window 方便 HTML 调用) ---
+
+        // 切换当前分类
         window.setCat = id => { activeCat = id; render(); };
 
+        // 习惯打卡总开关
         window.toggleHabit = id => {
             const h = habits.find(x => x.id === id);
             const today = getTodayKey();
@@ -274,18 +356,20 @@
             if(!h.history[today]) h.history[today] = { done: false, subDone: [] };
             const hist = h.history[today];
 
-            // 如果有子任务但未全部完成，且习惯未标记完成，则拦截
-            const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => hist.subDone?.includes(i));
+            // 如果有子任务但没全做完，禁止直接打卡
+            const allSubDone = h.steps?.length > 0 && h.steps.every((_, i) => (hist.subDone || []).includes(i));
             if(h.steps?.length > 0 && !allSubDone && !hist.done) return;
 
             hist.done = !hist.done;
             if(hist.done) {
+                // 播放音效并喷洒纸屑
                 if(config.sound) { try { new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3').play(); } catch(e){} }
                 confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
             }
             sync(); render();
         };
 
+        // 切换步骤完成状态
         window.toggleSubDone = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
@@ -293,11 +377,14 @@
             if(!h.history[today]) h.history[today] = { done: false, subData: {}, subDone: [] };
             const hist = h.history[today];
             if(!hist.subDone) hist.subDone = [];
+
             if(hist.subDone.includes(sIdx)) hist.subDone = hist.subDone.filter(i => i !== sIdx);
             else hist.subDone.push(sIdx);
+
             sync(); render();
         };
 
+        // 步骤计时器开关
         window.toggleSubTimer = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
@@ -308,11 +395,13 @@
             const sub = hist.subData[sIdx];
 
             if(sub.running) {
+                // 停止计时
                 sub.running = false;
                 clearInterval(timerInterval);
                 timerInterval = null;
+                sync();
             } else {
-                // 关闭其他正在运行的计时器
+                // 开启计时前先停止所有其他正在运行的计时器
                 habits.forEach(ha => {
                     if(ha.history?.[today]?.subData)
                         Object.values(ha.history[today].subData).forEach(s => s.running = false);
@@ -321,13 +410,13 @@
                 if(timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
                     sub.timer++;
-                    render();
-                    // 这里不直接调用 sync 是为了性能，计时停止时才 sync
+                    render(); // 实时刷新显示
                 }, 1000);
             }
             render();
         };
 
+        // 更新步骤对应的数值
         window.updateSubVal = (hId, sIdx, val) => {
             const h = habits.find(x => x.id === hId);
             const today = getTodayKey();
@@ -339,16 +428,39 @@
             sync();
         };
 
+        // 添加新习惯弹窗逻辑
         window.addHabit = () => {
             const L = I18N[config.lang];
             let selectedEmoji = EMOJI_LIST[0];
-            const html = `<div class="space-y-4"><input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select><div class="grid grid-cols-2 gap-3"><select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs"><option value="check">勾选</option><option value="timer">计时器</option><option value="input">数值</option></select><input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs outline-none"></div></div>`;
+            const html = `
+                <div class="space-y-4">
+                    <input id="h-name" placeholder="${L.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none">
+                    <div class="p-1">
+                        <p class="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">${L.emoji}</p>
+                        <div class="grid grid-cols-8 gap-2">
+                            ${EMOJI_LIST.slice(0, 16).map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}
+                        </div>
+                    </div>
+                    <select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
+                        ${categories.map(c => `<option value="${c.id}" ${activeCat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}
+                    </select>
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="h-type" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">
+                            <option value="check">勾选</option>
+                            <option value="timer">计时器</option>
+                            <option value="input">数值</option>
+                        </select>
+                        <input id="h-unit" placeholder="${L.unit}" value="min" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs outline-none">
+                    </div>
+                </div>`;
+
             window.currentEmoji = selectedEmoji;
             window.selectEmoji = (btn, e) => {
                 document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
                 window.currentEmoji = e;
             };
+
             openModal(L.add, html, () => {
                 const name = document.getElementById('h-name').value;
                 if(name) {
@@ -362,17 +474,16 @@
                         steps: [],
                         history: {}
                     });
-                    sync();
-                    render();
+                    sync(); render();
                 }
             });
         };
 
+        // 编辑现有习惯
         window.editHabitDetails = (id) => {
             const h = habits.find(x => x.id === id);
-            const L = I18N[config.lang];
             let selectedEmoji = h.emoji || EMOJI_LIST[0];
-            const html = `<div class="space-y-4"><input id="h-name" value="${h.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select></div>`;
+            const html = `<div class="space-y-4"><input id="h-name" value="${h.name}" class="w-full p-5 bg-slate-50 rounded-3xl font-bold outline-none"><div class="p-1"><div class="grid grid-cols-8 gap-2">${EMOJI_LIST.slice(0, 16).map(e => `<button onclick="window.selectEmoji(this, '${e}')" class="emoji-btn w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-slate-100 transition-all ${e===selectedEmoji?'selected':''}">${e}</button>`).join('')}</div></div><select id="h-cat" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs">${categories.map(c => `<option value="${c.id}" ${h.cat===c.id?'selected':''}>${getCategoryDisplayName(c)}</option>`).join('')}</select></div>`;
             window.currentEmoji = selectedEmoji;
             window.selectEmoji = (btn, e) => {
                 document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
@@ -387,6 +498,7 @@
             });
         };
 
+        // 删除确认
         window.confirmDeleteHabit = (id) => {
             openModal("确认删除？", `<p class="text-slate-400 font-bold text-sm">删除后数据无法找回。</p>`, () => {
                 habits = habits.filter(h => h.id !== id);
@@ -394,6 +506,7 @@
             });
         };
 
+        // 分类操作
         window.addCategory = () => {
             openModal("新建分类", `<input id="cat-name" placeholder="分类名称" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
                 const name = document.getElementById('cat-name').value;
@@ -418,6 +531,7 @@
             });
         };
 
+        // 为习惯添加具体步骤
         window.promptSubtask = id => {
             openModal("添加步骤", `<input id="sub-input" autofocus placeholder="步骤描述..." class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">`, () => {
                 const val = document.getElementById('sub-input').value;
@@ -430,13 +544,14 @@
             });
         };
 
+        // 移除某个步骤
         window.removeStep = (hId, sIdx) => {
             const h = habits.find(x => x.id === hId);
             h.steps.splice(sIdx, 1);
             sync(); render();
         };
 
-        // --- 导入导出 ---
+        // 数据导入导出（本地 JSON 文件）
         window.exportData = () => {
             const b = new Blob([JSON.stringify({ habits, config, categories })], { type: 'application/json' });
             const a = document.createElement('a');
@@ -455,16 +570,15 @@
                     habits = d.habits||[];
                     config = d.config||config;
                     categories = d.categories||categories;
-                    sync();
-                    render();
-                } catch(err) {
-                    alert("文件无效");
-                }
+                    sync(); render();
+                } catch(err) { alert("文件无效"); }
             };
             r.readAsText(e.target.files[0]);
         };
 
-        // --- 工具函数 ---
+        // --- 内部辅助函数 ---
+
+        // 打开弹窗模态框并配置逻辑
         function openModal(title, html, onOk) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-content').innerHTML = html;
@@ -474,12 +588,14 @@
             document.getElementById('modal-cancel').onclick = () => document.getElementById('modal').classList.add('hidden');
         }
 
+        // 计算一个习惯当天的累计数据（数值或时长）
         function getHabitStats(h) {
-            const hist = h.history?.[getTodayKey()] || { subData: {} };
+            const today = getTodayKey();
+            const hist = h.history?.[today] || { subData: {} };
             let totalVal = 0, totalTime = 0;
             if (h.steps?.length) {
                 h.steps.forEach((_, i) => {
-                    const d = hist.subData?.[i] || { val: 0, timer: 0 };
+                    const d = (hist.subData || {})[i] || { val: 0, timer: 0 };
                     totalVal += Number(d.val || 0);
                     totalTime += Number(d.timer || 0);
                 });
@@ -490,12 +606,14 @@
             return { totalVal, totalTime };
         }
 
+        // 秒数转 MM:SS 格式
         function formatTime(s) {
             const m = Math.floor(s/60);
             const sec = s % 60;
             return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
         }
 
+        // 初始化子任务拖拽排序
         function initSortable() {
             document.querySelectorAll('.sub-tasks').forEach(el => {
                 new Sortable(el, {
@@ -512,25 +630,20 @@
             });
         }
 
-        // --- 启动入口 ---
-        window.onload = loadData;
-
-        // --- 事件监听 ---
+        // --- 配置页面 DOM 事件监听 ---
         document.getElementById('add-habit-btn').onclick = () => window.addHabit();
 
         document.getElementById('btn-sound').onclick = () => {
             config.sound = !config.sound;
-            applyConfig();
-            sync();
+            applyConfig(); sync();
         };
 
         document.getElementById('select-lang').onchange = (e) => {
             config.lang = e.target.value;
-            applyConfig();
-            render();
-            sync();
+            applyConfig(); render(); sync();
         };
 
+        // 底部导航栏切换逻辑
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.page-content').forEach(p => p.classList.remove('page-active'));
@@ -542,6 +655,9 @@
                 btn.classList.add('tab-active', 'text-indigo-600');
             };
         });
+
+        // 流程启动：先进行身份验证
+        initAuth();
     </script>
 </body>
 </html>
